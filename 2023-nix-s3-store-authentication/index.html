@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title>Peter Kolloch - Blog - Nix in the Enterprise: AWS S3 Store Authentication</title>
+
+      <link rel=icon href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">λ</text></svg>'>
+
+      <link rel="alternate" type="application/rss+xml" title="RSS" href="https://blog.eigenvalue.net/rss.xml">
+
+      
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/slideout/1.0.1/slideout.min.js"></script>
+          
+      
+
+      
+          <link href="https://fonts.googleapis.com/css2?family=Gudea&display=swap" rel="stylesheet">
+          <link rel="stylesheet" href="https://blog.eigenvalue.net/site.css">
+          
+      
+
+      
+      
+    </head>
+
+    <body>
+        <div class="container">
+
+            <div id="mobile-navbar" class="mobile-navbar">
+              <div class="mobile-header-logo">
+                <a href="/" class="logo">Peter Kolloch</a>
+              </div>
+              <div class="mobile-navbar-icon icon-out">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+
+            <nav id="mobile-menu" class="mobile-menu slideout-menu slideout-menu-left">
+              <ul class="mobile-menu-list">
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                            Home
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                            Tags
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                            About
+                        </a>
+                    </li>
+                
+              </ul>
+            </nav>
+
+            <header id="header">
+                <div class="logo"><a href="https:&#x2F;&#x2F;blog.eigenvalue.net">Peter Kolloch</a></div>
+                <nav class="menu">
+                    <ul>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                                    Home
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                                    Tags
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                                    About
+                                </a>
+                            </li>
+                        
+                    </ul>
+                </nav>
+            </header>
+
+            <main>
+                <div class="content" id="mobile-panel">
+                    
+
+
+
+<article class="post">
+    
+    <header class="post__header">
+        <h1 class="post__title">
+            <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;2023-nix-s3-store-authentication&#x2F;">Nix in the Enterprise: AWS S3 Store Authentication</a>
+        </h1>
+        <div class="post__meta">
+            <span class="post__time">2023-11-12</span>
+            
+        </div>
+    </header>
+
+    <div class="post-content">
+      <p>Private stores? Temporary credentials? At the time of
+writing this, definitely not easy! (Please, please prove me wrong!)</p>
+<p>At the end of this article I'll make a pragmatic proposal that should be quite
+easy to implement and improve the user experience significantly.</p>
+<h2 id="stores-what-s-possible-today">Stores: What's possible today?</h2>
+<p>&quot;Stores&quot; store build results and allow you <a href="https://nixos.org/manual/nix/stable/package-management/sharing-packages">to share them between
+machines</a>.</p>
+<p>You can copy packages (store paths) with their transitive dependencies (closure)
+between machines explicitly, e.g. with <code>nix copy</code> or <code>nix-copy-closure</code>.</p>
+<p>You can also use them as a cache (substituter) during builds: For suitable build
+steps (derivations), Nix will check if the result has already been build and is
+available for download.</p>
+<p>How can we authenticate towards private stores? That depends on the store type:</p>
+<ul>
+<li>
+<p>SSH. Well with the usual SSH mechanisms.</p>
+</li>
+<li>
+<p>HTTPS. You can use <code>.netrc</code> to provide basic auth credentials.</p>
+</li>
+<li>
+<p>AWS S3. Uses the AWS SDK's
+<a href="https://github.com/NixOS/nix/blob/458e511dc41dd1726a42f001fa34222b3ab9223a/src/libstore/s3-binary-cache-store.cc#L96-L109"><code>Aws::Auth::AWSCredentialsProvider</code></a>
+which e.g. <a href="https://sdk.amazonaws.com/cpp/api/LATEST/aws-cpp-sdk-core/html/md_docs_2_credentials___providers.html">search for credentials in environment variables and configuration
+files</a>.</p>
+</li>
+</ul>
+<p>How do you provide these credentials? It depends on the context in which the
+store is used.</p>
+<ul>
+<li><code>nix copy</code>: The credentials e.g. for AWS are taken from the invoking user or
+the environment in which nix runs.</li>
+<li>Substitution with single-user setup without daemon: Same.</li>
+<li>Substitution but with nix-daemon: Credentials are resolved in the environment
+of the nix-daemon or from the config files of the nix-daemon user.</li>
+</ul>
+<p>That is already super confusing. You have entered an AWS session with temporary
+credentials available in environment variables:</p>
+<ul>
+<li><code>nix copy</code> just works.</li>
+<li><code>nix build</code> cannot use the substituter when it uses the nix-daemon.</li>
+</ul>
+<h2 id="cachix-state-of-the-art-for-https-stores">Cachix: State of the art for HTTPS stores</h2>
+<p>Cachix uses a CLI to make this as convenient as possible:</p>
+<ol>
+<li>It assumes you are a trusted user that can change nix-daemon settings on the
+fly.</li>
+<li>It updates your <code>nix.conf</code> with a potential private cache and a <code>net-rc</code> file
+setting.</li>
+<li><code>nix copy</code> takes this config directly and works.</li>
+<li><code>nix build</code> passes this config to the nix-daemon that can hopefully also read
+your net-rc file.</li>
+</ol>
+<p>Passing the config to the nix-daemon is implemented via daemon op
+<a href="https://github.com/NixOS/nix/blob/458e511dc41dd1726a42f001fa34222b3ab9223a/src/libstore/daemon.cc#L723C26-L758C6">SetOptions</a>
+which changes the <code>Settings</code> globally. That is fine, because the nix-daemon is
+forked for every connection.</p>
+<p>What are the problems?</p>
+<ul>
+<li>Need to patch your <code>nix-config</code>. This is potentially not that bad!</li>
+<li>Remote builders need additional server-side config. The config options might
+actually even be transfered with the <code>SetOptions</code> command, not sure, but your
+net-rc file is likely unavailable on the remote builder. Might be OK if you
+don't use them or someone else sets them up for you!</li>
+<li>Does not work well with temporary credentials. Might be a showstopper in some
+environments.</li>
+<li>Only works for HTTP(S) with Basic Authenticationstores. Yeah, well, if you use
+something else... Doesn't work with AWS S3...</li>
+</ul>
+<h2 id="aws-s3-state-of-the-art-solution">AWS S3: State of the art solution</h2>
+<p>If you have a single user nix setup, it is rather easy. Is your user
+authenticated and authorized to access the S3 store? So is nix running as that
+user.</p>
+<p>It becomes more annoying if you use a nix-daemon: You also need to provide the
+credentials to the nix-daemon. If you use</p>
+<h2 id="pragmatic-user-friendly-solution">Pragmatic User-Friendly Solution</h2>
+<p>I assume that your trust your nix-daemon or remote builder. I think that's fair
+and the assumption behind the approach that cachix uses.</p>
+<p>While <code>netrc</code> works pretty decently for Cachix, it doesn't match AWS well since
+it doesn't use Basic Authentication. Remember, the complicated logic is already
+all inside of the nix-daemon via the AWS SDK, we just need to pass a couple of
+values to the nix-daemon.</p>
+<p>I see two major approaches:</p>
+<ol>
+<li>
+<p>Custom logic for AWS: Either extend <code>SetOptions</code> or create a new operation to
+transfer AWS credentials and store them in special-purpose fields. Modify the
+credential provider chain to also look there for credentials.</p>
+</li>
+<li>
+<p>A general way to transfer environment variables from the nix client to the
+daemon for the current session.</p>
+</li>
+</ol>
+<h2 id="details-for-passing-environment-variables-to-the-daemon">Details for passing environment variables to the daemon</h2>
+<p>I like the second one better because it would also solve the problem if we
+integrated solutions for other cloud providers. And it might even be an
+acceptable workaround for fetches from private sources in builds (more about
+that later).</p>
+<p>I'd restrict this features with some explicit config options.</p>
+<ol>
+<li>
+<p>In the nix-daemon: <code>allowed-env-variables-from-trusted-client</code> as a list of
+environment variables that may be set from a trusted client. E.g.:</p>
+<pre data-lang="plain" class="language-plain "><code class="language-plain" data-lang="plain">allowed-env-variables-from-trusted-client = AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION
+</code></pre>
+</li>
+<li>
+<p>For the nix client: <code>pass-env-variables</code> as a list of environment variables
+that are passed whenever a connection to the nix-daemon is opened. E.g.:</p>
+<pre data-lang="plain" class="language-plain "><code class="language-plain" data-lang="plain">pass-env-variables = AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION
+</code></pre>
+</li>
+</ol>
+<p>If a client has valid AWS environment variables, this will make it just work,
+even with temporary credentials. </p>
+<ul>
+<li>
+<p><code>nix copy</code> / <code>nix build</code> will just both work after adding a few standard
+config options.</p>
+</li>
+<li>
+<p>The config can remain static while the credentials can change.</p>
+</li>
+</ul>
+<p>Yey!</p>
+<p>It might even work with remote builds: at least if the <code>SetOptions</code> op is also
+used there.</p>
+<p>Restrictions:</p>
+<ol>
+<li>
+<p>This requires the client to have a valid AWS session whenever you might
+access the AWS S3 store. It cannot prompt for e.g. your MFA code on demand.</p>
+</li>
+<li>
+<p>If the nix-daemon implementation ever changes and does not fork on every new
+connection, then changing the global environment variables of the process is
+also a nono. Note though, that a lot of the implementation would need to
+change in that case.</p>
+</li>
+</ol>
+<h2 id="conclusion">Conclusion</h2>
+<p>I can definitely think of other solutions here but this seems to have the right
+mix of &quot;good enough&quot;, &quot;not too specialized&quot; and &quot;easy to implement.&quot;</p>
+<p>I might be wrong, though, and would love to hear your thoughts!</p>
+<p>If you want to know more about my current journey and context, check out <a href="https://blog.eigenvalue.net/2023-nix-for-private-binaries/">Nix:
+Distributing private/public
+binaries</a>.</p>
+<p>Feel free to get in touch
+with me with the information shared on my GitHub profile:
+<a href="https://github.com/kolloch">kolloch</a></p>
+
+    </div>
+
+    
+    
+
+    <div class="post-footer">
+        
+            
+                <div class="post-tags">
+                    
+                        <a href="https://blog.eigenvalue.net/tags/nix/">#nix</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/authentication/">#authentication</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/aws/">#AWS</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/s3/">#S3</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/gitlab/">#GitLab</a>
+                    
+                </div>
+            
+            
+
+        
+
+    </div>
+
+    
+    
+</article>
+
+
+                </div>
+            </main>
+
+            
+            
+        </div>
+
+      
+          <script type="text/javascript" src="https://blog.eigenvalue.net/even.js" ></script>
+      
+    </body>
+
+</html>

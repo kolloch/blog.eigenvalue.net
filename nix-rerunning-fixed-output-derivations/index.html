@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title>Peter Kolloch - Blog - Nix: Re-running fixed output derivations - at the right time</title>
+
+      <link rel=icon href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">λ</text></svg>'>
+
+      <link rel="alternate" type="application/rss+xml" title="RSS" href="https://blog.eigenvalue.net/rss.xml">
+
+      
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/slideout/1.0.1/slideout.min.js"></script>
+          
+      
+
+      
+          <link href="https://fonts.googleapis.com/css2?family=Gudea&display=swap" rel="stylesheet">
+          <link rel="stylesheet" href="https://blog.eigenvalue.net/site.css">
+          
+      
+
+      
+      
+    </head>
+
+    <body>
+        <div class="container">
+
+            <div id="mobile-navbar" class="mobile-navbar">
+              <div class="mobile-header-logo">
+                <a href="/" class="logo">Peter Kolloch</a>
+              </div>
+              <div class="mobile-navbar-icon icon-out">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+
+            <nav id="mobile-menu" class="mobile-menu slideout-menu slideout-menu-left">
+              <ul class="mobile-menu-list">
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                            Home
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                            Tags
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                            About
+                        </a>
+                    </li>
+                
+              </ul>
+            </nav>
+
+            <header id="header">
+                <div class="logo"><a href="https:&#x2F;&#x2F;blog.eigenvalue.net">Peter Kolloch</a></div>
+                <nav class="menu">
+                    <ul>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                                    Home
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                                    Tags
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                                    About
+                                </a>
+                            </li>
+                        
+                    </ul>
+                </nav>
+            </header>
+
+            <main>
+                <div class="content" id="mobile-panel">
+                    
+
+
+
+<article class="post">
+    
+    <header class="post__header">
+        <h1 class="post__title">
+            <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;nix-rerunning-fixed-output-derivations&#x2F;">Nix: Re-running fixed output derivations - at the right time</a>
+        </h1>
+        <div class="post__meta">
+            <span class="post__time">2020-05-10</span>
+            
+        </div>
+    </header>
+
+    <div class="post-content">
+      <p>If you instantiate this derivation on your local machine, it will fail<sup class="footnote-reference"><a href="#1">1</a></sup>:</p>
+<pre><code>    nix repl ‘&lt;nixpkgs&gt;’
+
+    nix-repl&gt; :b runCommandLocal &quot;myfetch&quot; {
+              	outputHash =  &quot;sha256:04jnq6arig0amz0scadavbzn9bg9k4zphmrm1562n6ygfj1dnj45&quot;;
+          	} &#x27;&#x27;Garbage. This should be a script executable by bash calling curl. It isn’t.&#x27;&#x27;
+        &#x2F;build&#x2F;.attr-0: line 1: Garbage.: command not found
+    [0 built (1 failed)]
+    error: build of &#x27;&#x2F;nix&#x2F;store&#x2F;0bn9k5s227v6mb2pvyjdh9rh1rw4l1rm-myfetch.drv&#x27; failed
+</code></pre>
+<p>Reasonably so. Yet, on my machine, Nix contently answers with an output path. Wuuuut?</p>
+<p>For experienced Nixers, this is not a surprise: this happens if you change a
+so-called “Fixed Output Derivation” without updating the hash.</p>
+<p>However, when I first made this mistake, I didn’t know whether I did something
+wrong, had a crucial misunderstanding, or Nix had a bug. I was frustrated. I
+learned that I
+<a href="https://releases.nixos.org/nix-dev/2014-September/014362.html">am</a>
+<a href="https://github.com/NixOS/nix/issues/2270#issuecomment-521471329">not</a>
+<a href="https://github.com/NixOS/nix/issues/2270#issuecomment-621541929">alone</a>.
+Eventually, I understood what had happened and I could appreciate the tough
+implementation choices! Yet, there was this nagging feeling that there had to be
+a better way.</p>
+<p>In this article, I explore your choices as a fellow Nixer to
+verify your Fixed Output Derivations without refetching and rebuilding
+everything all the time.</p>
+<p>NOTE: This article is aimed at Nixers already familiar with writing derivations.
+For an introduction to Nix, see <a href="https://blog.eigenvalue.net/nix-superglue-for-immutable-infrastructure/">Nix: superglue for immutable
+infrastructure</a>.</p>
+<h3 id="fixed-output-derivations">Fixed Output Derivations</h3>
+<p>Normally, Nix doesn’t allow derivations (= build steps) to access the
+network<sup class="footnote-reference"><a href="#2">2</a></sup>.</p>
+<p>If you want network access from a derivation to download some sources, Nix
+requires you to set clear expectations: an output hash. A derivation with such a
+predetermined output hash is called “Fixed Output Derivation” or, abbreviated,
+“FOD”.</p>
+<p>This prevents you from silently introducing randomness into your build. If you
+interact with the network, you interact with the messy world beyond Nix’s
+control. But, at least, Nix can shout and abort the build, when your derivation
+does not produce the expected output.</p>
+<h3 id="enter-caching-substitution">Enter caching (substitution)</h3>
+<p>We surely do not want to re-download the Internet, again, in every build.</p>
+<p>Therefore, Nix will helpfully cache the result by the name of the derivation and
+the output hash.<sup class="footnote-reference"><a href="#3">3</a></sup> You have given Nix a promise: Trust me, whatever command I
+specify, it will result in the given hash. If Nix can ascertain the right
+result, why do all the hard work?</p>
+<h3 id="preventing-huge-rebuilds">Preventing huge rebuilds</h3>
+<p>It goes further than that. If we want to re-execute the derivation without
+messing with our Nix store that acts like a cache, we will need to change the
+output path. If we change the output path, all the beautiful derivations and
+process that output further, will need to be rebuilt.</p>
+<p>Ooooh, that can be expensive. E.g. think of GNU libc. All the things we need to
+rebuild with exactly the same code that we happen to store at a different path!</p>
+<h3 id="back-to-the-problem">Back to the problem</h3>
+<p>All this very reasonable thinking leads to the problem with which I started this
+article. The commands of the derivations are ignored if we already have a
+matching derivation result!</p>
+<p>In fact, Nixpkgs contains plenty of code that will typically be evaluated but
+not executed</p>
+<ul>
+<li>because there is still a matching result in the cache. <code>fetchurl</code> etc. are all
+implemented with FODs (Fixed Output Derivations), so that this applies to the
+hypothetical PR in which I change something like:</li>
+</ul>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">    fetchurl {
+    	url = &quot;https:&#x2F;&#x2F;pigeonhole.dovecot.org&#x2F;releases&#x2F;2.3&#x2F;dovecot-2.3-pigeonhole-${version}.tar.gz&quot;;
+    	sha256 = &quot;0pk0579ifl3ymfzn505396bsjlg29ykwr7ag8prcbafayg4rrj28&quot;;
+     }
+</code></pre>
+<p>To this:</p>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">    fetchurl {
+    	url = &quot;https:&#x2F;&#x2F;there.was.never.anything&#x2F;here&quot;;
+    	sha256 = &quot;0pk0579ifl3ymfzn505396bsjlg29ykwr7ag8prcbafayg4rrj28&quot;;
+     }
+</code></pre>
+<p>And most likely, the CI job would rubber stamp this lovely PR while a human
+would obviously object.</p>
+<p>Note that we can never ensure perfectly that an URL in a derivation still works
+-- it is outside of our control. But we could ensure that it worked at least
+once. A big difference, in my opinion!</p>
+<h3 id="rerunning-fods-on-all-input-changes">Rerunning FODs on all input changes</h3>
+<p>As an experiment, let’s see what is necessary to re-execute FODs (Fixed Output
+Derivations) on any input change.</p>
+<p>FODs are rebuilt when their output hash or their name changes. Therefore, if we
+include a hash over all inputs in the name, we rebuild the FOD on every input
+change. We do this in four simple steps:</p>
+<ol>
+<li>
+<p>To get Nix to calculate that hash conveniently for us, we “unfix” the given
+FOD and create a normal derivation based on it:</p>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">let unfixedDerivation =
+    fixedOutputDerivation.overrideAttrs(attrs: {
+        outputHash = null;
+        outputHashAlgo = null;
+        outputHashMode = null;
+    });
+</code></pre>
+</li>
+<li>
+<p>We grab the output path with the hash:</p>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">let outputPath = builtins.unsafeDiscardStringContext unfixedDerivation.outPath;
+</code></pre>
+<p>We are using <code>unsafeDiscardStringContext</code> to make Nix allow us to use the
+string as part of our name. Despite the name, it works in pure/strict eval
+mode and is quite harmless, yet unusual.</p>
+</li>
+<li>
+<p>Extract the hash:</p>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">let inputsHash = builtins.substring 11 32 outputPath;
+</code></pre>
+</li>
+<li>
+<p>And use it as part of the derivation name:</p>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">let name = &quot;${inputsHash}_${name}&quot;;
+</code></pre>
+</li>
+</ol>
+<p>You have just created a Fixed Output Derivation that will re-execute whenever
+any of its inputs changes!</p>
+<h3 id="rebalancing">Rebalancing</h3>
+<p>For me, rebuilding FODs on every input change, would have been easier to
+understand. For small projects, it is even a reasonable approach. But for medium
+and larger projects, it is simply unacceptable: If we use this technique in
+this extreme form, we will rebuild mostly everything if</p>
+<ul>
+<li>we update curl,</li>
+<li>we change the mirror list,</li>
+<li>any other input changes of <code>fetchurl</code>!</li>
+</ul>
+<p>For medium-sized projects I’d recommend another approach:</p>
+<ol>
+<li>Use only your original Fixed Output Derivation as a dependency for your real
+build.</li>
+<li>Then, use the instrumented Fixed Output Derivation in your continuous
+integration testing. That will rebuild all the Fixed Output Derivations
+themselves on any input change but it stops there. Nothing that depends on
+them needs to be rebuilt!</li>
+</ol>
+<p>For huge projects like nixpkgs, further fine-tuning is desirable. For every
+change on <code>fetchurl</code>, you may want to execute a couple of basic tests but you
+may find it unnecessary to re-execute all fetchurls. In addition, you might want
+to execute each fetch at least once every 30 days or so, even without changes,
+so that you ensure the URLs are still meaningful. Elaborating on that
+deserves another article.</p>
+<h3 id="easy-experimentation">Easy Experimentation</h3>
+<p>I have created a
+“<a href="https://github.com/kolloch/nur-packages/blob/master/lib/rerun-fixed.nix">rerunFixed</a>”
+function which can be used like this:</p>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">rerunOnChange {} myFixedOutputDerivation
+</code></pre>
+<p>By default, it will rerun the given FOD on every input change as a starting
+point. You can pre-override the attrs before they are used for the hash
+calculation:</p>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">rerunOnChange {
+   	preOverrideAttrs = attrs: { irrelevant = null; };
+} myFixedOutputDerivation
+</code></pre>
+<p>Look at the docs to see how you can tune it. And let me know <a href="https://twitter.com/pkolloch">via
+Twitter</a> if you have questions or suggestions.
+Follow me if you want to see more articles like this.</p>
+<h3 id="conclusion">Conclusion</h3>
+<p>I think that it is worth-while checking that the code of your Fixed Output
+Derivations still work, occasionally. When and how often - that depends heavily
+on the context. I am curious about what you come up with!</p>
+<h3 id="thanks">Thanks</h3>
+<p>Special thanks to Andreas Rammhold (<a href="https://twitter.com/andir0815">@andir0815</a>)
+for experimenting with the idea with me and telling me about
+<code>unsafeDiscardStringContext</code>. In my earlier prototype, I needed to do &quot;Import
+from Derivation&quot; to get rid of the string context!</p>
+<p>Thank you to Florian Klink (<a href="https://twitter.com/flokli">@flokli</a>) and Andi
+(again!) for giving me valuable feedback on an earlier draft of this article.</p>
+<p>Mistakes are mine.</p>
+<div class="footnote-definition" id="1"><sup class="footnote-definition-label">1</sup>
+<p>runCommandLocal is from nixpkgs.</p>
+</div>
+<div class="footnote-definition" id="2"><sup class="footnote-definition-label">2</sup>
+<p>When running in sandboxed mode. Which you should to get all the beautiful
+properties of Nix.</p>
+</div>
+<div class="footnote-definition" id="3"><sup class="footnote-definition-label">3</sup>
+<p>To be more exact: Nix will check if the output path of the derivation
+already exists locally or at any of the given remote substituters (like
+cache.nixos.org). The output path, in turn, depends on the name and the
+outputHash.</p>
+</div>
+
+    </div>
+
+    
+    
+
+    <div class="post-footer">
+        
+            
+                <div class="post-tags">
+                    
+                        <a href="https://blog.eigenvalue.net/tags/nix/">#nix</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/fixed-output-derivation/">#Fixed Output Derivation</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/fetch/">#fetch</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/fetchurl/">#fetchurl</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/nixos/">#nixos</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/hermetic-build/">#hermetic build</a>
+                    
+                </div>
+            
+            
+
+        
+
+    </div>
+
+    
+    
+</article>
+
+
+                </div>
+            </main>
+
+            
+            
+        </div>
+
+      
+          <script type="text/javascript" src="https://blog.eigenvalue.net/even.js" ></script>
+      
+    </body>
+
+</html>

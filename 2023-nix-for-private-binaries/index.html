@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title>Peter Kolloch - Blog - Nix: Distributing private&#x2F;public binaries</title>
+
+      <link rel=icon href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">λ</text></svg>'>
+
+      <link rel="alternate" type="application/rss+xml" title="RSS" href="https://blog.eigenvalue.net/rss.xml">
+
+      
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/slideout/1.0.1/slideout.min.js"></script>
+          
+      
+
+      
+          <link href="https://fonts.googleapis.com/css2?family=Gudea&display=swap" rel="stylesheet">
+          <link rel="stylesheet" href="https://blog.eigenvalue.net/site.css">
+          
+      
+
+      
+      
+    </head>
+
+    <body>
+        <div class="container">
+
+            <div id="mobile-navbar" class="mobile-navbar">
+              <div class="mobile-header-logo">
+                <a href="/" class="logo">Peter Kolloch</a>
+              </div>
+              <div class="mobile-navbar-icon icon-out">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+
+            <nav id="mobile-menu" class="mobile-menu slideout-menu slideout-menu-left">
+              <ul class="mobile-menu-list">
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                            Home
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                            Tags
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                            About
+                        </a>
+                    </li>
+                
+              </ul>
+            </nav>
+
+            <header id="header">
+                <div class="logo"><a href="https:&#x2F;&#x2F;blog.eigenvalue.net">Peter Kolloch</a></div>
+                <nav class="menu">
+                    <ul>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                                    Home
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                                    Tags
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                                    About
+                                </a>
+                            </li>
+                        
+                    </ul>
+                </nav>
+            </header>
+
+            <main>
+                <div class="content" id="mobile-panel">
+                    
+
+
+
+<article class="post">
+    
+    <header class="post__header">
+        <h1 class="post__title">
+            <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;2023-nix-for-private-binaries&#x2F;">Nix: Distributing private&#x2F;public binaries</a>
+        </h1>
+        <div class="post__meta">
+            <span class="post__time">2023-11-04</span>
+            
+        </div>
+    </header>
+
+    <div class="post-content">
+      <p>Getting proprietary binaries, scripts to your co-workers is so hard! And that is
+a shame because CLIs are awesome:</p>
+<ul>
+<li>
+<p>Composable. It is very easy to write a little wrapper around another CLI that
+adds some functionality.</p>
+</li>
+<li>
+<p>Easy to write. Much easier than a web app.</p>
+</li>
+<li>
+<p>...</p>
+</li>
+</ul>
+<p>I should write another article on that!</p>
+<h2 id="the-problem">The problem</h2>
+<p>You say: &quot;How hard is it really? Can't you do a release on GitLab/GitHub and
+provide some download links? They are already protected by private
+authentication.&quot;</p>
+<p>Yeah, sure. But there are some problems:</p>
+<ul>
+<li>
+<p>Version consistency. Everyone <em>might</em> download the binaries they need on
+demand resulting in a unique versioning footprint on every dev machine. Or are
+you naive enough that your developers update their kubectl version with plugins
+and third-party tools relying on it when you announce a new Kubernetes upgrade?
+There are more fun ways to spend your time than asking again and again: Have
+you upgraded CLI X yet?</p>
+</li>
+<li>
+<p>Packaging different language runtimes. Yeah, your Go or Rust binary might be
+somewhat easy to distribute. What about a Python script? A TypeScript CLI? So
+you need to package the runtime environment for your script as well. But not
+interfere with the local development setup.</p>
+</li>
+</ul>
+<h2 id="the-solution">The solution?</h2>
+<p><strong>nix &amp; the nixpkgs</strong>* collection.</p>
+<p><a href="https://nixos.org">Nix</a> is many things but it is also <strong>a package manager that
+works on Linux/Mac OS</strong>. It does NOT support Windows directly but my coworkers
+are fine with working in a WSL2 shell.</p>
+<ul>
+<li>
+<p>Awesome <code>direnv</code> integration: Imagine the right set of tools automatically
+available to you if you enter a project directory! And that also sets up commit
+hooks etc for you. That is <code>direnv</code> + <code>nix</code>. Have a look at
+<a href="https://devenv.sh/">devenv</a> if you want to play around with it quickly!</p>
+</li>
+<li>
+<p><code>nixpkgs</code> collection: <a href="https://search.nixos.org/packages">A vast collection of prepackaged
+software</a>, your favorite programming
+language tooling is most likely among them.</p>
+</li>
+<li>
+<p>Flake ecosystem: Flakes are a simple way to package nix libraries and binaries
+outside of the main <code>nixpkgs</code> collection.</p>
+</li>
+<li>
+<p>Very flexible packaging options:</p>
+<pre><code>- Already have some binaries? Great! You can integrate them into your
+  package bundle by supplying a download URL and a hash for all of them.
+
+- Bundle up your Python script with a runtime environment? Quite easy.
+
+- ...
+</code></pre>
+</li>
+<li>
+<p>Works alongside other package managers! Your users can keep using home brew or
+their native package managers for their personal preferences. Nix will not
+overwrite the global Python installation just because your script needs it.
+Even if you make tools available via direnv for a project, they are only in
+your path when you are in the project folder!</p>
+</li>
+</ul>
+<h2 id="ecosystem">Ecosystem</h2>
+<p>The Nix ecosystem is thriving. E.g. look at the commits in the
+<a href="https://github.com/NixOS/nixpkgs">nixpkgs</a> repository to have a glimpse at the
+vibrant open source community! There are also <a href="https://nixos.org/community/">multiple popular communication
+channels</a> where you can get help and discuss your
+ideas.</p>
+<p>But the ecosystem definitely also profits from contributions of various
+companies including Big Tech and companies fairly specialized on Nix or builds.</p>
+<p>Need commercial support? You are covered.</p>
+<p>There are several companies that bet on using Nix as a basis for dev tooling so
+I am sure that package support will even get better.</p>
+<h2 id="the-rough-edges-of-nix-itself">The rough edges of nix itself</h2>
+<p><em>Flake's status</em>*: You remember Flakes that I mentioned above? Well, technically,
+this is an experimental feature. They have been around for years, whole
+ecosystems have been built around it, but officially, they might still change in
+incompatible ways!</p>
+<p>I am obviously not the only one that has noticed this as a big problem and the
+consensus is that while not officially stable, they have such wide-spread use
+that keeping them working is a big priority nevertheless.</p>
+<p><em>Simple but exotic language</em>: The Nix ecosystem is built around the nix
+programming language. That is a simple and mostly well-designed language but it
+is not mainstream. The combination of being dynamically typed and lazy-evaluated
+by default makes debugging sometimes quite cumbersome.</p>
+<p>Nix allows some amazing freedom but it can be hard to orient at times: E.g. Nix
+doesn't impose much structure on your code and you need to rely on best
+practices on which there are diverse opinions.</p>
+<h2 id="using-nix-in-the-enterprise">Using nix in the enterprise</h2>
+<p>In my company, I have just started the journey and only completed the first
+steps. Here is an outline of what I did and am about to do. Feel free to chime
+in and suggest better paths for me!</p>
+<h3 id="streamline-the-nix-installation-experience">Streamline the nix installation experience</h3>
+<p>What do I want?</p>
+<ul>
+<li>
+<p>Simple installation instructions with as few steps as possible.</p>
+</li>
+<li>
+<p>Should work for developers who already set up some things and for people that
+have just started in the company.</p>
+</li>
+<li>
+<p>If you run it again, it should simply update everything to the latest software
+version and config version.</p>
+</li>
+</ul>
+<p>Therefore, I created
+<a href="https://gitlab.com/nexxiot-labs/nix-bootstrap">nix-bootstrap</a> that takes care
+of:</p>
+<ul>
+<li>
+<p>Installing nix with
+<a href="https://github.com/DeterminateSystems/nix-installer">nix-installer</a>. I love
+Determinate System's mission to get rid of annoying papercuts like e.g. broken
+installs after Mac OS upgrades.</p>
+</li>
+<li>
+<p>Deterministic versions of <code>nix-installer</code>, <code>nix</code>, and
+<a href="https://github.com/maralorn/nix-output-monitor"><code>nom</code></a>. Rather than just
+always installing the latest ones.</p>
+</li>
+<li>
+<p>Working shell completions for <code>nix</code> commands and other software installed in
+the user profile. <a href="https://github.com/DeterminateSystems/nix-installer">This will hopefully be
+fixed</a> in the installer
+script of nix that nix-installer also uses. Meanwhile I included a fix in
+<code>nix-bootstrap</code>.</p>
+</li>
+<li>
+<p>Installing <code>direnv</code>. <code>direnv</code> is unfortunately <a href="https://github.com/DeterminateSystems/nix-installer/issues/703#issuecomment-1791262857">out of scope for
+nix-installer</a>,
+so I also install it as part of the bootstrap nix profile that I install
+system-wide and for the installing user.</p>
+</li>
+<li>
+<p>Setting up credentials for private GitLab repositories.</p>
+</li>
+</ul>
+<p>All triggered with a simple shell command:</p>
+<pre><code>bash -c &quot;$(curl https:&#x2F;&#x2F;nexxiot-labs.gitlab.io&#x2F;nix-bootstrap&#x2F;install.sh)&quot;
+</code></pre>
+<p>I am happy to collaborate with others on improving this or upstreaming fixes to
+nix/nix-installer.</p>
+<h3 id="ci-support-for-nix-in-gitlab">CI support for nix in GitLab</h3>
+<p>Generally, the main nix projects are all on GitHub and, therefore, GitHub is
+better supported by the ecosystem. That said, using GitLab CI with nix is not
+super difficult.</p>
+<ul>
+<li>
+<p>Creating a CI container. Nicely minimal but still everything that is needed.
+E.g. GitLab CI expects a <code>grep</code> before I even get a chance to execute a <code>nix</code>
+command to install it. <code>nixpkgs/nix-flakes</code> is nicely minimal and does not
+include it. I used the new cool kid on the block <code>nix2container</code> but it has <a href="https://github.com/nlewo/nix2container/issues/94">a
+problem that gets only triggered if you build the container itself within that
+container.</a></p>
+</li>
+<li>
+<p>Allowing CI access to a nix substituter (= cache). Allowing read/write access
+to an S3 bucket was easy in our setup but it is much harder to share that
+access with users -- see below.</p>
+</li>
+<li>
+<p>Allowing nix in GitLab CI to fetch binary artifacts from other private repos.
+Absolutely not straight-forward to inject the right credentials into the fetch
+build step, especially since <a href="https://gitlab.com/gitlab-org/gitlab/-/issues/341157">GitLab does not support Basic Auth in its
+API</a>. Please say I am
+wrong and there is an easy way!</p>
+</li>
+<li>
+<p>Mac OS binaries. At least for our internal CLI tools, we'd want Mac OS support
+but we don't have CI runners for Mac OS and cross-compiling is tricky and
+maybe not even reliably possible. Maybe I'll just test &amp; push them manually
+into the cache on releases.</p>
+</li>
+</ul>
+<h3 id="local-install-support">Local install support</h3>
+<p>If users install an unchanged flake, read-access to a binary cache (=substituter
+in nix lingo) should be sufficient. If that is prefilled by CI and/or manual
+steps as needed -- all cache requests should be hits.</p>
+<p>Unfortunately, we only allow temporary AWS session credentials for our users.
+Passing <a href="https://github.com/NixOS/nix/issues/5723">those to the nix-daemon is
+not really possible</a>.</p>
+<p>Using <a href="https://www.cachix.org/">Cachix</a> instead would be a serious contender
+with fair prices. Unfortunately, that would require additional onboarding /
+offboarding steps for both our IT and the developers itself. Maybe that can be
+solved with SSO support in the future!</p>
+<p>What is more, all systems we interact with, need to be approved by our Internal
+IT reviews. For AWS S3, since we are already using it, this is not necessary.</p>
+<p>So here I am still wondering what the best path forward is!</p>
+<h3 id="local-build-support">Local build support</h3>
+<p>Obviously, local builds should also work when working on internal tool release.
+So we need to solve the authentication problem to the GitLab API (for fetching
+binary artifacts) not only in CI but also for every developer.</p>
+<p>Maybe I can build sort of a &quot;doctor&quot; script that takes care of ensuring that all
+necessary secrets are set up and that the nix-daemon can access them?</p>
+<h3 id="devcontainer-gitpod-support">DevContainer/GitPod support</h3>
+<p>What about allowing our developers to dabble with nix tools without even
+installing nix on their computer?</p>
+<p><a href="https://code.visualstudio.com/docs/devcontainers/containers">Devcontainer
+support</a> in Visual
+Code is quite awesome. A lot of our developers use Intellij -- WSL2 remote
+support seems to be better than devcontainer support in my testing, so probably
+not helpful for those users.</p>
+<p>Complementarily, <a href="https://www.gitpod.io/">GitPod</a> would be a super nice test bed that
+could be easily used from our GitLab repositories.</p>
+<p>Authentication within a devcontainer hopefully just works similarly to doing it
+locally outside of the container -- with the right volume mounts. But it might
+be also a big pain!</p>
+<p>For GitPod, it is likely a completely different flow.</p>
+<h3 id="cache-pruning">Cache Pruning</h3>
+<p>Just expiring files after 30 days or so doesn't work with nix since it breaks
+some invariants: All dependencies of a derivation are also assumed to be
+available via the cache (I think).</p>
+<p>Therefore, implementing a nice expiry policy is more involved. E.g. maintaining
+a list of store paths that are still relevant for recent builds and pruning
+everything else.</p>
+<h2 id="a-journey">A journey...</h2>
+<p>Puuuh... That is quite a journey ahead of me! I believe it can unlock a lot of
+productivity by easy tool distribution in my company but it doesn't look that
+easy!</p>
+<p>Thanks for reading until here.</p>
+<p>I am thankful for any pointers to make this smoother. Feel free to get in touch
+with me with the information shared on my GitHub profile:
+<a href="https://github.com/kolloch">kolloch</a></p>
+
+    </div>
+
+    
+    
+
+    <div class="post-footer">
+        
+            
+                <div class="post-tags">
+                    
+                        <a href="https://blog.eigenvalue.net/tags/packaging/">#Packaging</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/linux/">#Linux</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/mac-os/">#Mac OS</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/aws/">#AWS</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/s3/">#S3</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/nix/">#Nix</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/nixpkgs/">#Nixpkgs</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/credentials/">#Credentials</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/substituter/">#Substituter</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/cache/">#Cache</a>
+                    
+                </div>
+            
+            
+
+        
+
+    </div>
+
+    
+    
+</article>
+
+
+                </div>
+            </main>
+
+            
+            
+        </div>
+
+      
+          <script type="text/javascript" src="https://blog.eigenvalue.net/even.js" ></script>
+      
+    </body>
+
+</html>
