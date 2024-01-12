@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title>Peter Kolloch - Blog - ffmpeg: Capture &amp; encode a 4K stream in realtime using VAAPI</title>
+
+      <link rel=icon href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">λ</text></svg>'>
+
+      <link rel="alternate" type="application/rss+xml" title="RSS" href="https://blog.eigenvalue.net/rss.xml">
+
+      
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/slideout/1.0.1/slideout.min.js"></script>
+          
+      
+
+      
+          <link href="https://fonts.googleapis.com/css2?family=Gudea&display=swap" rel="stylesheet">
+          <link rel="stylesheet" href="https://blog.eigenvalue.net/site.css">
+          
+      
+
+      
+      
+    </head>
+
+    <body>
+        <div class="container">
+
+            <div id="mobile-navbar" class="mobile-navbar">
+              <div class="mobile-header-logo">
+                <a href="/" class="logo">Peter Kolloch</a>
+              </div>
+              <div class="mobile-navbar-icon icon-out">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+
+            <nav id="mobile-menu" class="mobile-menu slideout-menu slideout-menu-left">
+              <ul class="mobile-menu-list">
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                            Home
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                            Tags
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                            About
+                        </a>
+                    </li>
+                
+              </ul>
+            </nav>
+
+            <header id="header">
+                <div class="logo"><a href="https:&#x2F;&#x2F;blog.eigenvalue.net">Peter Kolloch</a></div>
+                <nav class="menu">
+                    <ul>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                                    Home
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                                    Tags
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                                    About
+                                </a>
+                            </li>
+                        
+                    </ul>
+                </nav>
+            </header>
+
+            <main>
+                <div class="content" id="mobile-panel">
+                    
+
+
+
+<article class="post">
+    
+    <header class="post__header">
+        <h1 class="post__title">
+            <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;ffmpeg-elgato-camlink-4k&#x2F;">ffmpeg: Capture &amp; encode a 4K stream in realtime using VAAPI</a>
+        </h1>
+        <div class="post__meta">
+            <span class="post__time">2020-05-27</span>
+            
+        </div>
+    </header>
+
+    <div class="post-content">
+      <p>I am a wonnabe hobbiest filmmaker. Often, I only noticed problems with the raw
+footage on my Desktop computer at home - long after I could correct them by a
+simple retake. Wouldn't it be awesome to record your footage directly to your
+laptop? Make the footage available to others in your team really quickly, maybe
+by storing it on a server?</p>
+<p>I want to do this on my XPS 13 since that is my most portable option. I should
+note that my laptop is decent (Intel i7-8550U 1.8 GHz) but doesn't have a
+discrete graphics card. In fact, I cannot even play back the 4K footage recorded
+on my Fuji XT-3 with HEVC (h265) on my laptop without tweaking VLC. And even on
+my hefty AMD Ryzen Threadripper 2950X 16-Core, I cannot encode on the CPU alone
+in realtime.</p>
+<p>Therefore, encoding in realtime should probably be impossible. Or not? I had to
+try. Oh, and on Linux. <a href="https://nixos.org">NixOS</a> to be specific.</p>
+<p>Note that this article is not full of deep insights but mostly contains things I
+tried and then eventually worked. This kind of content has helped me
+tremendously in the past, so let's dump it into the Interwebs.</p>
+<h2 id="the-easy-way-obs">The easy way: OBS</h2>
+<p>The first thing that I tried was OBS studio. Here is what somewhat worked for me:</p>
+<ul>
+<li>I set the output of my camera to 4K, 16:9, 25 fps (full HD does not work)</li>
+<li>I added a <code>Video Capture (V4L2)</code> source. I needed to set the video format to
+<code>YV12</code> which is apparently an alias for <code>NV12</code>.</li>
+<li>I added a <code>Audio Input Capture (Pulse Audio)</code> since the video source does not
+include the audio.</li>
+</ul>
+<p>It somewhat worked. But it randomly stopped working. It dropped frames -- that
+got better when I disabled the preview. Anyways, if you reading this some time
+after I published this, give it a try, it might be the simplest option!</p>
+<p>Therefore, I decided to use CLI tools to
+understand what was going on and to ultimately have more control. I dabbled a
+bit with <code>gstreamer</code> but ultimately chose <code>ffmpeg</code> because I found more and
+better documentation for it and it seemed to work better.</p>
+<h2 id="digging-deeper-required-software">Digging deeper: Required Software</h2>
+<p>If you want to follow along, I installed these packages in NixOS by adding them
+to my package list:</p>
+<pre><code># Capturing and encoding
+ffmpeg-full # My version was 4.2.2
+
+# Inspect video devices etc.
+v4l-utils
+usbutils
+
+# Hardware acceleration for encoding&#x2F;decoding
+vaapiIntel
+libva
+libva-utils
+</code></pre>
+<h2 id="underlying-video-device">Underlying video device</h2>
+<p><code>ffmpeg</code> and other CLI tools require us to specify the video device name -- at
+least if you have multiple video inputs e.g. the built-in webcam and the Elgato
+Camlink 4K. You can either use the <code>/dev/videoX</code> device name that you saw in OBS
+Studio or find the device names with:</p>
+<pre><code>v4l2-ctl --list-devices
+Cam Link 4K: Cam Link 4K (usb-0000:39:00.0-1.2):
+	&#x2F;dev&#x2F;video1
+	&#x2F;dev&#x2F;video2
+</code></pre>
+<p>You can already use the device names (the first one for the Cam Link) that you
+found here. The trouble is that these device names might depend on the order in
+which the video devices are detected. To get a stable device name that works
+across reboots in you shell scripts, you can look into <code>/dev/v4l/by-id</code>
+directory to find a good stable device name. For my devicem it was
+<code>/dev/v4l/by-id/usb-Elgato_Cam_Link_4K_0004550EAA000-video-index0</code>.</p>
+<p>We'll refer to whatever device you have chosen with <code>V4L_DEVICE</code> later in the
+text.</p>
+<h2 id="playing-the-video-feed">Playing the video feed</h2>
+<p>To check whether ffmpeg can play the stream, you can use:</p>
+<p><code>ffplay -f v4l2 -i $V4L_DEVICE</code></p>
+<p>That is super simple, isn't it? It even detects the video format correctly. If
+it doesn't for you, try specifying one with <code>-input_format</code>, e.g. <code>-input_format nv12</code> before the <code>-i</code>.</p>
+<h2 id="capture-the-video-feed">Capture the video feed</h2>
+<p>What does <code>ffmpeg</code> do by default? Let's see by exchanging <code>ffplay</code> with <code>ffmpeg</code>
+and specifying an output file:</p>
+<p><code>ffmpeg -f v4l2 -i $V4L_DEVICE capture.mkv</code></p>
+<p>Hey, that works! But only barely. </p>
+<ul>
+<li>I cannot encode the video in real time and the video is buffered. The raw
+video feed with 29.97 fps clocks in at about 3Gb/s, a bit less for 25 fps. If
+we can't keep up, ffmpeg buffers the rest in main memory. So only suitable for
+quite short videos ;)</li>
+<li>Also, the output is ugly, we need to specify something nicer.</li>
+</ul>
+<h2 id="hardware-encoding-to-the-rescue">Hardware-encoding to the rescue</h2>
+<p>Since my laptop does not have a discrete graphics card, I am using the &quot;VAAPI&quot;
+standard which is supported by newer Intel CPUs.</p>
+<pre><code>ffmpeg -vaapi_device &#x2F;dev&#x2F;dri&#x2F;renderD128 \
+  -f v4l2 -input_format nv12 -i $V4L_DEVICE \
+  -vf &#x27;hwupload&#x27; \
+  -c:v hevc_vaapi -b:v 100M -maxrate:v 120M capture.mkv
+</code></pre>
+<p>Woooh! That's a lot to understand.</p>
+<p>Let's start with the basics: A basic ffmpeg command consists of a some global
+flags (<code>-vaapi_device /dev/dri/renderD128</code> in this case) list of inputs (<code>-i ...</code>) and a list of outputs (e.g. file names). Local options effect the next
+input or output, so decoding options are specified before an input, encoding
+options for the output are specified before the output file name. <code>-f v4l2 -input_format nv12</code> apply to the input. <code>-c:v hevc_vaapi -b:v 100M -maxrate:v 120M</code> all apply to the output <code>capture.mkv</code>.</p>
+<p>Between our input and the output, there is a <code>-vf</code> video filter command which
+can be used to process the raw video. You could scale the video, transform the
+color space, things like that. In our case, we need to make the video stream
+available in the hardware encoder with <code>hwupload</code>. That seems to a bit of a
+specialty with the VAAPI support. In my short experimentation with the NVIDIA
+support (<code>nvenc</code>) on another machine, I didn't need something similar.</p>
+<p><code>-c:v hevc_vaapi</code> is used to choose the video codec (<code>-c</code> is for codec, <code>:v</code> is
+for video) from a long list of supported once. The codecs that use VAAPI have
+a <code>_vaapi</code> suffix by convention.</p>
+<p>Without specifying the wanted and maximum bit rate, I got a stream with low
+quality. Therefore, I specified <code>-b:v 100M -maxrate:v 120M</code> to aim at quite high
+quality. The highest quality setting on the X-T3 for 4K 25fps is 400Mbs, so it
+might be even worth to experiment with higher settings. Note that there is a
+<a href="https://trac.ffmpeg.org/ticket/7629">bug</a> that requires you to specify a
+maxrate that is not much higher than the wanted bit rate.</p>
+<p>Using VAAPI, I could encode 25 fps in realtime. Unfortunately, 29.97 is already
+too much. That unfortunately also means that my plan to encode a smaller,
+low-quality stream at the same time, also failed.</p>
+<p><a href="https://trac.ffmpeg.org/wiki/Hardware/VAAPI">The FFMPEG VAAPI Wiki
+Page</a> gives context and many useful
+examples if you want to know more.</p>
+<h2 id="audio-source">Audio source</h2>
+<p>The audio feed is - unfortunately - separate from the video feed.</p>
+<p>First, let me save you a day of fiddling. Don't use ALSA directly, use
+PulseAudio directly if you use it on your system. Using ALSA directly from
+ffmpeg resulted in clapping a lot to debug audio sync issues and thus driving my
+girl-friend insane.</p>
+<p>Use <code>pactl list sources</code> to output tons of information about your audio sources.</p>
+<p>Choose the right device and pick the name. For me, it was
+<code>alsa_input.usb-Elgato_Systems_Cam_Link-03.iec958-stereo</code>.</p>
+<h2 id="capture-the-audio-feed">Capture the audio feed</h2>
+<p>This is straight-forward, we just have to specify that we want to use PulseAudio
+(by <code>-f pulse</code>) and specify the device name as input.</p>
+<pre><code>ffmpeg -f pulse -i alsa_input.usb-Elgato_Systems_Cam_Link-03.iec958-stereo capture.mp3
+</code></pre>
+<p>We skip compression to save some CPU when we do everything together later on:</p>
+<pre><code>ffmpeg -f pulse -i alsa_input.usb-Elgato_Systems_Cam_Link-03.iec958-stereo \
+    -c:a copy capture.wav
+</code></pre>
+<p><code>-c:a copy</code> set the audio codec to <code>copy</code> which skips any audio encoding. In
+this case, it is redundant since the output format doesn't support any special
+codec anyways. It becomes relevant when we combine it with video.</p>
+<h2 id="putting-it-together-doesn-t-work">Putting it together... doesn't work</h2>
+<p>This mostly combines our video/audio examples and adds a <code>-thread_queue_size 2048</code> to allow some generous buffering:</p>
+<pre><code>fmpeg -vaapi_device &#x2F;dev&#x2F;dri&#x2F;renderD128 \
+    -i $V4L_DEVICE \
+    -thread_queue_size 2048 -f pulse -i $PULSE_DEVICE \
+    -vf &#x27;format=nv12,hwupload&#x27; \
+    -c:v hevc_vaapi -b:v 100M -maxrate:v 120M \
+    -acodec copy \
+    output-combined.mkv
+</code></pre>
+<p>This should be the final section, right? I'd hope so but for me this wasn't true
+at all.</p>
+<p>This might work for you. For me, it also worked once or so. Unfortunately, most
+of the time it will get stuck after two frames. After some random
+experimentation, I noticed that unplugging the device allowed me to record once,
+most of the time. I think that it is due to syncing the audio / video stream.
+The video source seems to request key frames doesn't get the expected data
+afterwards. Or something else.</p>
+<h2 id="resetting-the-usb-device-without-unplugging">Resetting the USB device without unplugging</h2>
+<p>That's not nice but can we at least automate it? After some browsing, I found
+this recipe on <a href="https://askubuntu.com/a/61165">Ask Ubuntu</a>:</p>
+<pre data-lang="bash" class="language-bash "><code class="language-bash" data-lang="bash">sudo sh -c &quot;echo 0 &gt; &#x2F;sys&#x2F;bus&#x2F;usb&#x2F;devices&#x2F;1-4.6&#x2F;authorized&quot;
+sudo sh -c &quot;echo 1 &gt; &#x2F;sys&#x2F;bus&#x2F;usb&#x2F;devices&#x2F;1-4.6&#x2F;authorized&quot;
+</code></pre>
+<p>I created two shell scripts </p>
+<ul>
+<li><a href="https://github.com/kolloch/elgato_capture/blob/d5a023d68c7b25727277b8b15e71e19492cbe545/find-elgato4k-sys-dir.sh">find-elgato4k-sys-dir.sh</a>
+to find the right sys directory and </li>
+<li><a href="https://github.com/kolloch/elgato_capture/blob/d5a023d68c7b25727277b8b15e71e19492cbe545/reset.sh">reset.sh</a>
+to issue these commands and wait for the device to come up again.</li>
+</ul>
+<h2 id="conclusion">Conclusion</h2>
+<p>After calling <code>reset.sh</code>, the combined command works reliably for me. And I have
+a new found respect for the codecs in my camera.</p>
+<p>If you benefitted from this article or, even better, improved upon it, please
+let me know, e.g. <a href="https://twitter.com/pkolloch">on Twitter</a>.</p>
+
+    </div>
+
+    
+    
+
+    <div class="post-footer">
+        
+            
+                <div class="post-tags">
+                    
+                        <a href="https://blog.eigenvalue.net/tags/ffmpeg/">#ffmpeg</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/elgato/">#elgato</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/4k/">#4K</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/capture/">#capture</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/pulse/">#pulse</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/vaapi/">#vaapi</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/fuji/">#Fuji</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/fuji-xt-3/">#Fuji XT-3</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/linux/">#Linux</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/nixos/">#NixOS</a>
+                    
+                </div>
+            
+            
+
+        
+
+    </div>
+
+    
+    
+</article>
+
+
+                </div>
+            </main>
+
+            
+            
+        </div>
+
+      
+          <script type="text/javascript" src="https://blog.eigenvalue.net/even.js" ></script>
+      
+    </body>
+
+</html>

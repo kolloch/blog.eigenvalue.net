@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title>Peter Kolloch - Blog - Nix &amp; Docker: Layer explicitly without duplicate packages!</title>
+
+      <link rel=icon href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">λ</text></svg>'>
+
+      <link rel="alternate" type="application/rss+xml" title="RSS" href="https://blog.eigenvalue.net/rss.xml">
+
+      
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/slideout/1.0.1/slideout.min.js"></script>
+          
+      
+
+      
+          <link href="https://fonts.googleapis.com/css2?family=Gudea&display=swap" rel="stylesheet">
+          <link rel="stylesheet" href="https://blog.eigenvalue.net/site.css">
+          
+      
+
+      
+      
+    </head>
+
+    <body>
+        <div class="container">
+
+            <div id="mobile-navbar" class="mobile-navbar">
+              <div class="mobile-header-logo">
+                <a href="/" class="logo">Peter Kolloch</a>
+              </div>
+              <div class="mobile-navbar-icon icon-out">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+
+            <nav id="mobile-menu" class="mobile-menu slideout-menu slideout-menu-left">
+              <ul class="mobile-menu-list">
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                            Home
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                            Tags
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                            About
+                        </a>
+                    </li>
+                
+              </ul>
+            </nav>
+
+            <header id="header">
+                <div class="logo"><a href="https:&#x2F;&#x2F;blog.eigenvalue.net">Peter Kolloch</a></div>
+                <nav class="menu">
+                    <ul>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                                    Home
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                                    Tags
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                                    About
+                                </a>
+                            </li>
+                        
+                    </ul>
+                </nav>
+            </header>
+
+            <main>
+                <div class="content" id="mobile-panel">
+                    
+
+
+
+<article class="post">
+    
+    <header class="post__header">
+        <h1 class="post__title">
+            <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;2023-nix2container-everything-once&#x2F;">Nix &amp; Docker: Layer explicitly without duplicate packages!</a>
+        </h1>
+        <div class="post__meta">
+            <span class="post__time">2023-11-12</span>
+            
+        </div>
+    </header>
+
+    <div class="post-content">
+      <p>I love <a href="https://github.com/nlewo/nix2container">nix2container</a>! It allows you to
+build docker containers with nix, declaratively, and it even avoids writing
+large archive files to the disk.</p>
+<p>However, there are some pitfalls when using it. Especially, when using it as I do:
+spelling out the contents of your layers explicitly.</p>
+<h2 id="straight-forward-image-with-explicit-layering">Straight-forward image with explicit layering</h2>
+<p>Here is a container with <code>bash</code> and <code>zsh</code> included:</p>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">{ #...
+  layered = nix2container.buildImage {
+    name = &quot;layered&quot;;
+    layers =
+      let layerDefs = [
+        {
+          deps = with nixpkgs; [ readline ];
+        }
+        {
+          deps = with nixpkgs; [ bashInteractive ];
+        }
+        {
+          deps = with nixpkgs; [ zsh ];
+        }
+      ];
+      in builtins.map nix2container.buildLayer layerDefs;
+    config = {
+      Env = [
+        (let path = with nixpkgs; lib.makeBinPath [ bashInteractive zsh ];
+        in &quot;PATH=${path}&quot;)
+      ];
+    };
+  };
+}
+</code></pre>
+<p>I love this! So straight-forward! Close to the on-disk format. I feel like
+having control without the fuzz.</p>
+<p>And it works:</p>
+<pre data-lang="plain" class="language-plain "><code class="language-plain" data-lang="plain">❯ docker run -it layered bash
+bash-5.2#
+exit
+❯ docker run -it layered zsh
+34c7a50b621e#
+</code></pre>
+<p>How efficient is that image? Does it contain duplicate files? Let's ask
+<a href="https://github.com/wagoodman/dive">dive</a>:</p>
+<pre data-lang="plain" class="language-plain "><code class="language-plain" data-lang="plain">❯ dive --ci layered
+  Using default CI config
+Image Source: docker:&#x2F;&#x2F;layered
+Fetching image... (this can take a while for large images)
+Analyzing image...
+  efficiency: 40.9436 %
+  wastedBytes: 142845873 bytes (143 MB)
+  userWastedPercent: 126.2491 %
+Inefficient Files:
+Count  Wasted Space  File Path
+    3         14 MB  &#x2F;nix&#x2F;store&#x2F;c0hkzndf6i162jymxmlirn9l6ypv7p3c-glibc-2.38-23&#x2F;share&#x2F;i18n&#x2F;locales&#x2F;cns11643_stroke
+    3         10 MB  &#x2F;nix&#x2F;store&#x2F;c0hkzndf6i162jymxmlirn9l6ypv7p3c-glibc-2.38-23&#x2F;share&#x2F;i18n&#x2F;locales&#x2F;iso14651_t1_common
+    3        6.1 MB  &#x2F;nix&#x2F;store&#x2F;c0hkzndf6i162jymxmlirn9l6ypv7p3c-glibc-2.38-23&#x2F;lib&#x2F;libc.so.6
+[...]
+</code></pre>
+<p>Oh. That is not so great. What happened here?</p>
+<p><code>bashInteractive</code> and <code>zsh</code> share some dependencies. I already tried to factor
+out <code>readline</code> which also uses <code>glibc</code>. But still, <code>nix2container</code> repeats all
+store paths, even if present in earlier layers.</p>
+<p>Why is that?</p>
+<p><code>nix2container.buildLayer</code> builds each layer independently,
+<code>nix2container.buildImage</code> assembles them in one image.</p>
+<h2 id="deduplicating-common-dependencies-manually">Deduplicating common dependencies (manually)</h2>
+<p>How do we make a layer aware of previous layers? We use the <code>layers</code> attribute
+of <code>buildLayer</code>:</p>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">{ #...
+  layeredDeduplicated = nix2container.buildImage {
+    name = &quot;layered&quot;;
+    layers =
+      let
+        commonLayer = {
+          deps = with nixpkgs; [ readline ];
+        };
+      layerDefs = [
+        {
+          deps = with nixpkgs; [ bashInteractive ];
+          layers = [ (nix2container.buildLayer commonLayer) ];
+        }
+        {
+          deps = with nixpkgs; [ zsh ];
+          layers = [ (nix2container.buildLayer commonLayer) ];
+        }
+      ];
+      in builtins.map nix2container.buildLayer layerDefs;
+    config = {
+      Env = [
+        (let path = with nixpkgs; lib.makeBinPath [ bashInteractive zsh ];
+        in &quot;PATH=${path}&quot;)
+      ];
+    };
+  };
+}
+</code></pre>
+<p>Let's have a look at dive's opinion on this:</p>
+<pre data-lang="plain" class="language-plain "><code class="language-plain" data-lang="plain">Image Source: docker:&#x2F;&#x2F;layered
+Fetching image... (this can take a while for large images)
+Analyzing image...
+  efficiency: 100.0000 %
+  wastedBytes: 0 bytes (0 B)
+  userWastedPercent: 0.0000 %
+Inefficient Files:
+Count  Wasted Space  File Path
+None
+Results:
+  PASS: highestUserWastedPercent
+  SKIP: highestWastedBytes: rule disabled
+  PASS: lowestEfficiency
+Result:PASS [Total:3] [Passed:2] [Failed:0] [Warn:0] [Skipped:1]
+</code></pre>
+<p>Dive is super happy! Nice!</p>
+<h2 id="deduplication-automatic">Deduplication (automatic)</h2>
+<p>Wouldn't it be nice if later layers always skipped all store paths already
+contained in earlier layers?</p>
+<p>This being nix, this is easy to generalize:</p>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">{ # ...
+  # Nest all layers so that prior layers are dependencies of later layers.
+  # This way, we should avoid redundant dependencies.
+  foldImageLayers = let
+    mergeToLayer = priorLayers: component:
+      assert builtins.isList priorLayers;
+      assert builtins.isAttrs component; let
+        layer = nix2container.buildLayer (component
+          &#x2F;&#x2F; {
+            layers = priorLayers;
+          });
+      in
+        priorLayers ++ [layer];
+  in
+    layers: lib.foldl mergeToLayer [] layers;
+}
+</code></pre>
+<p>Each layer will reference all prior layers in the <code>layers</code> attribute. This might
+be problematic with a large number of layers -- but hasn't been problematic so
+far for me. I am sure one can optimize it.</p>
+<p>Putting <code>foldImageLayers</code> to good use:</p>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">{ # ...
+  layeredDeduplicatedAutomatic = nix2container.buildImage {
+    name = &quot;layeredAutomatic&quot;;
+    layers = 
+      let layerDefs = [
+        { deps = with nixpkgs; [ readline ]; }
+        { deps = with nixpkgs; [ bashInteractive ]; }
+        { deps = with nixpkgs; [ zsh ]; }
+      ];
+      in foldImageLayers layerDefs;
+    config = {
+      Env = [
+        (let path = with nixpkgs; lib.makeBinPath [ bashInteractive zsh ];
+        in &quot;PATH=${path}&quot;)
+      ];
+    };
+  };
+}
+</code></pre>
+<p>This results again in a docker image without any redundant store paths! Dive is
+happy and so are we: We explicitly define the contents of each layer but
+automatically exclude all duplicate store paths!</p>
+<h2 id="the-end">The end</h2>
+<p>Note that <code>nix2container</code> supports layering your dependencies automatically
+using the algorithm described
+<a href="https://grahamc.com/blog/nix-and-layered-docker-images/">here</a>. Check out the
+<code>maxLayers</code> setting.</p>
+<p>I like to have more control but maybe fully automatic is the best? I'm curious
+to hear your thoughts on the automatic vs. manual control in Docker container
+optimization. What has been your approach?</p>
+<p>Feel free to get in touch with me with the information shared on my GitHub
+profile: <a href="https://github.com/kolloch">kolloch</a></p>
+<h2 id="references">References</h2>
+<p>I am for sure not the first one that stumbled upon this. Initially, the
+discussion issue <a href="https://github.com/nlewo/nix2container/issues/41">#41</a> of
+nix2container pointed me into the right direction!</p>
+
+    </div>
+
+    
+    
+
+    <div class="post-footer">
+        
+            
+                <div class="post-tags">
+                    
+                        <a href="https://blog.eigenvalue.net/tags/packaging/">#Packaging</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/docker/">#docker</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/nix/">#nix</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/nix2container/">#nix2container</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/layers/">#layers</a>
+                    
+                </div>
+            
+            
+
+        
+
+    </div>
+
+    
+    
+</article>
+
+
+                </div>
+            </main>
+
+            
+            
+        </div>
+
+      
+          <script type="text/javascript" src="https://blog.eigenvalue.net/even.js" ></script>
+      
+    </body>
+
+</html>

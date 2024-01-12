@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title>Peter Kolloch - Blog - Tutorial: Using flake-parts to set up a nodejs devshell</title>
+
+      <link rel=icon href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">λ</text></svg>'>
+
+      <link rel="alternate" type="application/rss+xml" title="RSS" href="https://blog.eigenvalue.net/rss.xml">
+
+      
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/slideout/1.0.1/slideout.min.js"></script>
+          
+      
+
+      
+          <link href="https://fonts.googleapis.com/css2?family=Gudea&display=swap" rel="stylesheet">
+          <link rel="stylesheet" href="https://blog.eigenvalue.net/site.css">
+          
+      
+
+      
+      
+    </head>
+
+    <body>
+        <div class="container">
+
+            <div id="mobile-navbar" class="mobile-navbar">
+              <div class="mobile-header-logo">
+                <a href="/" class="logo">Peter Kolloch</a>
+              </div>
+              <div class="mobile-navbar-icon icon-out">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+
+            <nav id="mobile-menu" class="mobile-menu slideout-menu slideout-menu-left">
+              <ul class="mobile-menu-list">
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                            Home
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                            Tags
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                            About
+                        </a>
+                    </li>
+                
+              </ul>
+            </nav>
+
+            <header id="header">
+                <div class="logo"><a href="https:&#x2F;&#x2F;blog.eigenvalue.net">Peter Kolloch</a></div>
+                <nav class="menu">
+                    <ul>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                                    Home
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                                    Tags
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                                    About
+                                </a>
+                            </li>
+                        
+                    </ul>
+                </nav>
+            </header>
+
+            <main>
+                <div class="content" id="mobile-panel">
+                    
+
+
+
+<article class="post">
+    
+    <header class="post__header">
+        <h1 class="post__title">
+            <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;2024-flake-parts-nodejs-devshell&#x2F;">Tutorial: Using flake-parts to set up a nodejs devshell</a>
+        </h1>
+        <div class="post__meta">
+            <span class="post__time">2024-01-06</span>
+            
+        </div>
+    </header>
+
+    <div class="post-content">
+      <p>Do you want setup a reproducible nodejs version for your project? And you
+want to use nix to execute npm/nodejs directly on your OS (Linux/MacOS/WSL2)
+-- rather than a heavy-weight <a href="https://containers.dev/">devcontainer</a> using Docker?</p>
+<p>It is not difficult per-se but it took a while for me to assemble all the bits
+and pieces. Let's make it easier for you!</p>
+<h2 id="requirements">Requirements</h2>
+<ol>
+<li>flake-enabled <code>nix</code> - copy the installation shell script from <a href="https://github.com/DeterminateSystems/nix-installer/blob/main/README.md">nix-installer</a> if you haven't installed it
+already.</li>
+<li><a href="https://direnv.net/"><code>direnv</code></a> - if you haven't installed it already:
+<ol>
+<li>Use the <code>direnv</code> package from nixpkgs, e.g. with <code>nix profile install nixpkgs#direnv</code>.</li>
+<li>Add <code>eval &quot;$(direnv hook bash)&quot;</code> to your <code>.bashrc</code> or <code>eval &quot;$(direnv hook bash)&quot;</code>
+to your <code>.zshrc</code>.</li>
+</ol>
+</li>
+<li>I assume an existing git repository. If not at hand, create a new directory and
+execute <code>git init</code>.</li>
+</ol>
+<h2 id="setup-flake-nix-with-flake-parts">Setup flake.nix with flake-parts</h2>
+<p>The example code uses <a href="https://flake.parts/">flake.parts</a>. You can start with
+this flake.nix template:</p>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix"># flake.nix &quot;flake&quot; &quot;imports&quot;
+{
+  inputs = {
+    nixpkgs.url = &quot;nixpkgs&quot;;
+
+    flake-parts = {
+      url = &quot;github:hercules-ci&#x2F;flake-parts&quot;;
+      inputs.nixpkgs-lib.follows = &quot;nixpkgs&quot;;
+    };
+
+    # Development
+
+    devshell = {
+      url = &quot;github:numtide&#x2F;devshell&quot;;
+      inputs.nixpkgs.follows = &quot;nixpkgs&quot;;
+    };
+  };
+  
+  outputs = inputs@{ self, nixpkgs, flake-parts, devshell }: flake-parts.lib.mkFlake { inherit inputs; } {
+    systems = [ &quot;x86_64-linux&quot; &quot;aarch64-linux&quot; &quot;aarch64-darwin&quot; &quot;x86_64-darwin&quot; ];
+
+    imports = [];
+
+    flake = {
+      # your existing definitions before using flake-parts...
+    };
+  };
+}
+</code></pre>
+<p>If you need to quick&amp;dirty migrate a few existing flake attributes,
+you can stuff them into &quot;flake&quot; and refactor later.</p>
+<p>Quickly check if you made any error:</p>
+<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">$ git add flake.nix
+$ nix flake check
+warning: Git tree &#x27;&#x2F;Users&#x2F;...&#x2F;projects&#x2F;astro-starlight-with-nix&#x27; is dirty
+warning: The check omitted these incompatible systems: aarch64-linux, x86_64-darwin, x86_64-linux
+Use &#x27;--all-systems&#x27; to check all.
+</code></pre>
+<p>You can ignore the warnings but you need to fix any errors.</p>
+<p>If you look at <code>git status</code>, yet another file appeared: <code>flake.lock</code> That's
+good, it contains the exact versions of our dependencies. It should
+be committed with the rest.</p>
+<h2 id="choose-nodejs-version">Choose nodejs version</h2>
+<p>Alright. For astro/starlight, we are going to need <code>nodejs</code> with <code>npm</code>.</p>
+<p>Let's chose a nodejs version and put it into the exported
+packages of the flake. That way we can already test run it
+and refer to it from other config files:</p>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix"># flake-modules&#x2F;nodejs-packages.nix
+{
+  perSystem = { pkgs, ... }: {
+    packages.nodejs = pkgs.nodejs_21;
+  };
+}
+</code></pre>
+<p>Now add this file to the imports in <code>flake.nix</code>:</p>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix"># flake.nix
+# ...
+  imports = [
+    .&#x2F;flake-modules&#x2F;nodejs-packages.nix
+  ];
+# ...
+</code></pre>
+<p>Add the file to git and execute <code>nix flake check</code> to notice any errors.</p>
+<p>We can also test the nodejs version that we chose:</p>
+<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">❯ nix run .#nodejs
+warning: Git tree &#x27;&#x2F;Users&#x2F;...&#x2F;projects&#x2F;astro-starlight-with-nix&#x27; is dirty
+Welcome to Node.js v21.5.0.
+Type &quot;.help&quot; for more information.
+</code></pre>
+<h2 id="setup-devshell">Setup devshell</h2>
+<p>This is not so convenient... yet.</p>
+<p>Let's make sure that we and our contributors all use the same version!</p>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix"># flake-modules&#x2F;nodejs-devshell.nix
+{ inputs, ...}: {
+  imports = [
+    inputs.devshell.flakeModule
+  ];
+
+  perSystem = { config, ... }: {
+    devshells.default = {
+      commands = [
+        { package = config.packages.nodejs; category = &quot;docs&quot;; }
+      ];
+    };
+  };
+}
+</code></pre>
+<p>Notice the <code>config.packages.nodejs</code>? Here we are referring
+to the nodejs package definition that we setup before.</p>
+<p>Now add this file to the imports in <code>flake.nix</code>:</p>
+<pre data-lang="nix "./flake-modules/nodejs-devshell.nix"" class="language-nix "./flake-modules/nodejs-devshell.nix" "><code class="language-nix "./flake-modules/nodejs-devshell.nix"" data-lang="nix "./flake-modules/nodejs-devshell.nix""># flake.nix
+# ...
+    imports = [
+      .&#x2F;flake-modules&#x2F;nodejs-packages.nix
+      .&#x2F;flake-modules&#x2F;nodejs-devshell.nix
+    ];
+# ...
+</code></pre>
+<p>And now add the new file to git and run <code>nix flake check</code>.
+Noticing a pattern? Well, get used to it ;)</p>
+<p>Now we can enter a devshell with <code>node</code> and <code>npm</code> provided
+by nix:</p>
+<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">❯ nix develop
+warning: Git tree &#x27;&#x2F;Users&#x2F;...&#x2F;projects&#x2F;astro-starlight-with-nix&#x27; is dirty
+🔨 Welcome to devshell
+
+[[general commands]]
+
+  menu   - prints this menu
+
+[docs]
+
+  nodejs - Event-driven I&#x2F;O framework for the V8 JavaScript engine
+
+[devshell]$ which npm
+&#x2F;nix&#x2F;store&#x2F;3h53w5zkwpyapp8510d6ivmhmf47x0bs-devshell-dir&#x2F;bin&#x2F;npm
+[devshell]$ which node
+&#x2F;nix&#x2F;store&#x2F;3h53w5zkwpyapp8510d6ivmhmf47x0bs-devshell-dir&#x2F;bin&#x2F;node
+[devshell]$
+exit
+</code></pre>
+<p>You can exit the shell on Unix-like OSes with CTRL+D or by typing &quot;exit&quot;.</p>
+<h2 id="adding-an-envrc-for-direnv">Adding an .envrc for direnv</h2>
+<p>All this entering and exiting. Here come direnv to automate that step for us!</p>
+<p>Create a new file:</p>
+<pre data-lang="bash" class="language-bash "><code class="language-bash" data-lang="bash"># .envrc
+#!&#x2F;usr&#x2F;bin&#x2F;env bash
+# ^ make editor happy
+
+#
+# Use https:&#x2F;&#x2F;direnv.net&#x2F; to automatically load the dev shell.
+#
+
+# Update this by looking at https:&#x2F;&#x2F;github.com&#x2F;nix-community&#x2F;nix-direnv#installation
+# under &quot;Direnv source&quot;
+if ! has nix_direnv_version || ! nix_direnv_version 3.0.4; then
+  source_url &quot;https:&#x2F;&#x2F;raw.githubusercontent.com&#x2F;nix-community&#x2F;nix-direnv&#x2F;3.0.4&#x2F;direnvrc&quot; &quot;sha256-DzlYZ33mWF&#x2F;Gs8DDeyjr8mnVmQGx7ASYqA5WlxwvBG4=&quot;
+fi  
+
+watch_file -- flake-modules&#x2F;*.nix
+use flake . --show-trace
+</code></pre>
+<p>If you press enter on the shell prompt now and you have <code>direnv</code> set up
+properly, you should get something like:</p>
+<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">direnv: error &#x2F;Users&#x2F;...&#x2F;projects&#x2F;astro-starlight-with-nix&#x2F;.envrc is blocked. Run `direnv allow` to approve its content
+</code></pre>
+<p>Well, we'll do as we are told:</p>
+<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">❯ direnv allow .
+direnv: loading ~&#x2F;projects&#x2F;astro-starlight-with-nix&#x2F;.envrc
+direnv: loading https:&#x2F;&#x2F;raw.githubusercontent.com&#x2F;nix-community&#x2F;nix-direnv&#x2F;3.0.4&#x2F;direnvrc (sha256-DzlYZ33mWF&#x2F;Gs8DDeyjr8mnVmQGx7ASYqA5WlxwvBG4=)
+direnv: using flake . --show-trace
+direnv: nix-direnv: using cached dev shell
+🔨 Welcome to devshell
+
+[[general commands]]
+
+  menu   - prints this menu
+
+[docs]
+
+  nodejs - Event-driven I&#x2F;O framework for the V8 JavaScript engine
+
+direnv: export +DEVSHELL_DIR +IN_NIX_SHELL +NIXPKGS_PATH +PRJ_DATA_DIR +PRJ_ROOT +name ~PATH ~XDG_DATA_DIRS
+</code></pre>
+<p>Awesome! Now we have <code>npm</code> and <code>nodejs</code> with the chosen version in our PATH
+whenever we are in this directory.</p>
+<p>It also creates a <code>.direnv</code> folder that you probably want to add to your <code>.gitignore</code>:</p>
+<pre data-lang="bash" class="language-bash "><code class="language-bash" data-lang="bash">echo &quot;.direnv&quot; &gt;&gt;.gitignore
+</code></pre>
+<h2 id="checking-your-flake-with-nix-repl">Checking your flake with <code>nix repl</code></h2>
+<p><code>nix repl</code> would deserve its own blog article or book but to get your started:</p>
+<pre data-lang="console ":lf ."" class="language-console ":lf ." "><code class="language-console ":lf ."" data-lang="console ":lf ."">❯ nix repl
+Welcome to Nix 2.18.1. Type :? for help.
+
+nix-repl&gt; :lf .
+warning: Git tree &#x27;&#x2F;Users&#x2F;peterkolloch&#x2F;projects&#x2F;astro-starlight-with-nix&#x27; is dirty
+Added 20 variables.
+</code></pre>
+<p><code>:lf .</code> stands for &quot;load flake&quot; and has to be followed by a path. Here,
+the current directory.</p>
+<p>Now the <code>outputs</code> of the flake are discoverable in the <code>outputs</code> attribute
+in the shell. You can use tab completion (i.e. hit TAB after <code>outputs.</code>):</p>
+<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">nix-repl&gt; outputs.
+outputs.apps                 outputs.checks               outputs.devShells            outputs.formatter            outputs.legacyPackages       outputs.nixosConfigurations  outputs.nixosModules         outputs.overlays             outputs.packages
+nix-repl&gt; outputs.devShells
+outputs.devShells
+nix-repl&gt; outputs.devShells.
+outputs.devShells.aarch64-darwin  outputs.devShells.aarch64-linux   outputs.devShells.x86_64-darwin   outputs.devShells.x86_64-linux
+nix-repl&gt; outputs.devShells.aarch64-darwin.default
+</code></pre>
+<p>You see that there are attributes for each <code>system</code> (architecture) that 
+we defined our flake for.</p>
+<h2 id="updating-all-dependencies">Updating all dependencies</h2>
+<p>If you want to use a <code>nodejs</code> version from a more recent nixpkgs later,
+you'll have to update your flake dependencies. That is as easy as:</p>
+<pre data-lang="bash" class="language-bash "><code class="language-bash" data-lang="bash">nix flake update
+</code></pre>
+<h2 id="vscode-support">VSCode support</h2>
+<p>Did you know that you can actually force VSCode and some other IDEs to use
+exactly the same nodejs version for builds that you specified?</p>
+<p>For VSCode you can use the <a href="https://marketplace.visualstudio.com/items?itemName=Rubymaniac.vscode-direnv">direnv</a> plugin. There are a couple of them. This
+is the one that I use currently.</p>
+<p>To help fellow VSCode users find the extension quickly, you can add the following
+file to the project:</p>
+<pre data-lang="json" class="language-json "><code class="language-json" data-lang="json">&#x2F;&#x2F; .vscode&#x2F;extensions.json
+{
+    &quot;recommendations&quot;: [
+        &quot;rubymaniac.vscode-direnv&quot;
+    ]
+}
+</code></pre>
+<h2 id="conclusion">Conclusion</h2>
+<p>Now we have set up a very simple dev shell with a pinned nodejs version
+that is convenient to use. That is a big help to onboard anyone onto the project.</p>
+<p>We did it step-by step by adding little tiny <code>flake-module.nix</code> files to our flake.
+This was convenient for this tutorial but actually also works well in practice.
+If you scope one <code>flake-module.nix</code> to one purpose, it remains easy to understand.</p>
+<p>A good basis - let's soon add more on top! For example,
+a documentation site built with the astro framework:</p>
+<p><a href="../2024_astro_starlight_with_nix">Tutorial: Building our Astro Starlight page with Nix &amp; flake.parts</a></p>
+<p>Feel free to give me feedback/ask questions at <a href="https://discourse.nixos.org/t/tutorial-using-flake-parts-to-set-up-a-nodejs-devshell/37940">discourse</a> or in a
+<a href="https://github.com/kolloch/blog.eigenvalue.net/issues">GitHub issue</a>. I want
+to hear your thoughts so feel free to err on the side of commenting too much.</p>
+
+    </div>
+
+    
+    
+
+    <div class="post-footer">
+        
+            
+                <div class="post-tags">
+                    
+                        <a href="https://blog.eigenvalue.net/tags/nix/">#nix</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/javascript/">#JavaScript</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/devshell/">#devshell</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/flake-parts/">#flake-parts</a>
+                    
+                </div>
+            
+            
+
+        
+
+    </div>
+
+    
+    
+</article>
+
+
+                </div>
+            </main>
+
+            
+            
+        </div>
+
+      
+          <script type="text/javascript" src="https://blog.eigenvalue.net/even.js" ></script>
+      
+    </body>
+
+</html>

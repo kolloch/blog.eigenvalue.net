@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title>Peter Kolloch - Blog - Nix: Authenticated Fetches from GitLab - Reading about Related Work</title>
+
+      <link rel=icon href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">λ</text></svg>'>
+
+      <link rel="alternate" type="application/rss+xml" title="RSS" href="https://blog.eigenvalue.net/rss.xml">
+
+      
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/slideout/1.0.1/slideout.min.js"></script>
+          
+      
+
+      
+          <link href="https://fonts.googleapis.com/css2?family=Gudea&display=swap" rel="stylesheet">
+          <link rel="stylesheet" href="https://blog.eigenvalue.net/site.css">
+          
+      
+
+      
+      
+    </head>
+
+    <body>
+        <div class="container">
+
+            <div id="mobile-navbar" class="mobile-navbar">
+              <div class="mobile-header-logo">
+                <a href="/" class="logo">Peter Kolloch</a>
+              </div>
+              <div class="mobile-navbar-icon icon-out">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+
+            <nav id="mobile-menu" class="mobile-menu slideout-menu slideout-menu-left">
+              <ul class="mobile-menu-list">
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                            Home
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                            Tags
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                            About
+                        </a>
+                    </li>
+                
+              </ul>
+            </nav>
+
+            <header id="header">
+                <div class="logo"><a href="https:&#x2F;&#x2F;blog.eigenvalue.net">Peter Kolloch</a></div>
+                <nav class="menu">
+                    <ul>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                                    Home
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                                    Tags
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                                    About
+                                </a>
+                            </li>
+                        
+                    </ul>
+                </nav>
+            </header>
+
+            <main>
+                <div class="content" id="mobile-panel">
+                    
+
+
+
+<article class="post">
+    
+    <header class="post__header">
+        <h1 class="post__title">
+            <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;2023-nix-fetch-with-authentication&#x2F;">Nix: Authenticated Fetches from GitLab - Reading about Related Work</a>
+        </h1>
+        <div class="post__meta">
+            <span class="post__time">2023-11-19</span>
+            
+        </div>
+    </header>
+
+    <div class="post-content">
+      <p>In <a href="/2023-nix-for-private-binaries/">our quest</a> to establish
+<a href="https://nixos.org">Nix</a> for distributing developer toolchains, we depend also
+on private, company-specific tools. We do not want to nixify every build but
+simply fetch the existing build artifacts using GitLab authentication.</p>
+<p>This might not be exactly what you need but I assume it is incredibly common to
+want to fetch artifacts from some authenticated API.</p>
+<p>I discussed this with <a href="https://twitter.com/ericson2314_">John Ericson</a> and he
+gave me some pointers to current work in progress or proposals that might be
+related. Thank you!</p>
+<p>Not exactly being familiar with core Nix development, the impact of these issues
+is not always easy for me to understand. Therefore, I thought it might also help
+others if I published the notes while reading through the suggested material.</p>
+<h2 id="nix-store-acls">Nix Store ACLs</h2>
+<p>Reference: <a href="https://github.com/NixOS/rfcs/pull/143">RFC 0143</a></p>
+<blockquote>
+<p>Implement a way to only allow user access to a store path if they provide
+proof that they have all the necessary sources available, or had the access
+permission explicitly granted to them.</p>
+</blockquote>
+<p>Well written!</p>
+<p>Obviously, this is related to stores and is superficially nearly the opposite to
+what we want: This is about restricting access to parts of a store -- not being
+more permissive.</p>
+<p>But, could we not require substitution of all private artifacts? I.e. ensure
+that all private artifacts are available in our shared Nix store (cache)? The
+fetches would just be &quot;Fixed Output Derivations&quot;, meaning that they already
+specify the hash of the fetched artifact, and before attempting the fetch our
+nix client would check if it is already available in the cache.</p>
+<p>This would not even require this RFC but simply a private Nix store, in our case
+via AWS S3.</p>
+<p>I have some concerns:</p>
+<ol>
+<li>The fetching &quot;builder code&quot; would be misleading since the intention is that it
+would never be executed. I vaguely remember there is a construct in
+<a href="https://github.com/NixOS/nixpkgs/">Nixpkgs</a> that models &quot;you need to download
+this independently and upload it to your store&quot;, so that could be remedied.</li>
+<li>Someone or something would still need to get access to the artifact and
+upload it to the shared store. That might be relatively easy to achieve (e.g.
+by putting the upload into the CI/CD pipeline of the binary) or difficult,
+depending as so often on the context. For us, it would be acceptable, even
+though I'd like to keep the CI/CD pipelines untouched for now so that the nix
+related changes keep in a few isolated repos.</li>
+<li>I conceptualize the AWS S3 Store that we set up as &quot;cache&quot; that does not need
+to be backed up etc. The requirement of always having all private binaries
+available there, would invalidate that.</li>
+</ol>
+<p>Where would the RFC be of use for us?</p>
+<p>The RFC itself mentions that this is probably not a good idea to use this for
+secrets. So we should not use it to e.g. store GitLab credentials in a store
+path in a protected manner. But I'll think more about that.</p>
+<p>What the RFC does allow is to allow access to some binaries without making their
+full build recipes and source available. That could be nice but is generally not
+our problem: The build of the binaries is not nixified anyways and thus Nix
+doesn't see the source. Furthermore, all our employees can see pretty much all
+our source code and we like it that way.</p>
+<p>In theory, the RFC could be a solution for bootstrapping: In our case, for even
+authenticating, we need certain authentication helpers. With the RFC, we could
+expose the parts of the store publicly that are strictly needed for
+bootstrapping publicly and all the rest only privately.</p>
+<p>But all in all, it looks quite complicated to pull off and is not a good match
+for our needs, I think.</p>
+<h2 id="builtin-fetching-should-be-represented-by-derivations">Builtin fetching should be represented by derivations</h2>
+<p>Reference: <a href="https://github.com/NixOS/nix/issues/9077">Nix Github Issue #9077</a></p>
+<p>Currently, there are two fundamental different ways of &quot;fetching&quot;:</p>
+<ol>
+<li>
+<p>&quot;built-in fetchers&quot; (libfetchers): These are functions of &quot;Nix the language&quot; and are
+executed directly while evaluating the build tree.</p>
+</li>
+<li>
+<p>&quot;fixed-output derivation fetchers&quot;: Nix allows them to access the network by
+virtue of an easily verifiable promise. FODs need to specify the hash of
+their output upfront.</p>
+</li>
+</ol>
+<p>This has some indirect consequences which is why, depending on their needs,
+prefer one over the other.</p>
+<p>&quot;Built-in&quot; fetchers run wherever the Nix expressions are evaluated - in the
+environment of the user that invoked the build. That has an immediate
+application for us: If the user is authenticated, the fetcher also has
+access to the associated credentials!</p>
+<p>Yet, it also requires that we have an appropriate fetcher directly built into
+Nix, which makes this weirdly inflexible: The built-in fetchers do not e.g.
+allow setting an authentication header from an environment variable. That makes
+it impossible fetching job artifacts via <a href="https://gitlab.com/gitlab-org/gitlab/-/issues/341157">the GitLab API that does not allow
+basic authentication</a>
+which would be supported via credentials via the <del>insanely limited, not even
+supporting passwords with spaces</del> time-proven <code>netrc</code> mechanism.</p>
+<p>In addition to this inflexibility due to the nature of being in the Nix code
+(live with what we Elders have foreseen, Young Jedi), there are also performance issues,
+e.g. builtin-fetchers are only executed one by one and not in parallel with
+derivations. This is what the issues strives to fix that and more (I believe).
+That is really cool!</p>
+<p>I am not clear, though, <a href="https://github.com/NixOS/nix/issues/9077#issuecomment-1817861537">if this would mean that the built-in fetchers would
+still be executed by the build
+client</a>, e.g.
+the user that called <code>nix build</code>. Let's assume that in good faith for now,
+otherwise this would make authentication more difficult not easier. (Note from
+future Peter: This gets actually addressed in the next section!)</p>
+<p>So in a future world where Nix contained a built-in fetcher suitable for GitLab,
+this could mitigate some of the downsides of built-in fetchers.</p>
+<p>How would it work then with remote builders?</p>
+<p>For the first time:</p>
+<ol>
+<li><code>nix build</code> gets invoked.</li>
+<li>Fetch from GitLab running in the same process or at least environment as the
+<code>nix build</code> process so it has access to all user authentication.</li>
+<li>The result is uploaded to the builders from the local machine...</li>
+<li>build continues</li>
+<li>Someway or the other, the result of the fetch ends up in our shared Nix
+store/substituter.</li>
+</ol>
+<p>Afterwards:</p>
+<ol>
+<li><code>nix build</code> gets invoked.</li>
+<li>The result gets substituted which is also fast on remote builders.</li>
+<li>Build continues...</li>
+</ol>
+<p>Not too bad, but actually nearly not at all dependent on issue #9077. It mostly
+depends on supporting GitLab by having more flexible built-in fetchers.
+Potentially, I could do that with a nix plugin or patch.</p>
+<p>What is really cool about this solution is that the credentials never leave the
+client. Which makes it both simple and secure. But implementing that issue in a
+way that would allow executing these fetches in parallel but on the client is
+not really trivial.</p>
+<p>BTW, built-in fetchers have other super powers (e.g. not necessarily
+requiring an output hash but simply a git hash) and FODs have some other problems
+(e.g. <a href="https://blog.eigenvalue.net/nix-rerunning-fixed-output-derivations/">being unwantedly substituted when the URL but not the hash is
+changed</a>).</p>
+<h2 id="optional-client-side-building">Optional client-side building</h2>
+<p>Reference: <a href="https://github.com/NixOS/nix/issues/9344">Nix Github Issue #9344</a></p>
+<blockquote>
+<ol>
+<li>For fixed output derivations that need authentication, it is probably
+better to run them as the current user in order to give them secrets,
+especially ephemeral secrets (like expiring tokens) that might require some
+humans in the loop (various 2fa schemes) and are cumbersome to store in the
+store.</li>
+<li>Builtin fetching should be represented by derivations #9077 once the above
+is sorted out, we should do this too. Currently the main reason fetching is
+not done with derivations is authentication. This provides a proper
+solution. All fetching done as client-side derivations nicely meets in the
+middle of the current fixed-output derivations vs libfetchers divide.</li>
+</ol>
+</blockquote>
+<p>Huh! John addressed my previous concerns here without me even realizing. Thanks
+again!</p>
+<p>After this John dives directly into implementation details that are hard to
+follow for me:</p>
+<blockquote>
+<ol start="3">
+<li>General decoupling. Building shouldn't depend on using the SQL database
+(and I don't think it currently does). It ought to work with other stores that
+also provide a bike system view.</li>
+</ol>
+</blockquote>
+<p>I assume that he means &quot;build system view&quot; but <a href="https://github.com/NixOS/nix/issues/9344#issuecomment-1817868871">I can't follow the relationship to
+the SQLite database</a>.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>It was interesting to learn about the different proposals. Some of them would be
+awesome improvements, the last one would nearly solve my problem.</p>
+<p>Short term I see the following possibilities for allowing private fetches from
+GitLab:</p>
+<ol>
+<li>Patching nix or writing a plugin so that I can use a more flexible <a href="https://nixos.org/manual/nix/stable/language/builtins.html#builtins-fetchurl">fetchurl
+built-in</a>
+that supports setting headers from environment variables. That would allow me
+to pass credentials without somehow having them end up in the store.</li>
+<li>Using a custom FOD to fetch from GitLab and have a mechanism to pass the
+GitLab API token to the builder.</li>
+</ol>
+<p>The second one could be easily achieved by similar means as described
+<a href="https://blog.eigenvalue.net/2023-nix-s3-store-authentication/">here</a>: E.g.
+allowing trusted clients to change allowlisted environment variables in the
+builder. Since that is not possible yet and requires further discussion, I
+implemented a hacky way to do that in our internal PoC. I might write a separate
+blog post about that!</p>
+<p>If you want to know more about my current journey and context, check out <a href="https://blog.eigenvalue.net/2023-nix-for-private-binaries/">Nix:
+Distributing private/public
+binaries</a>.</p>
+<p>Noticed a mistake? Want to discuss something with me? Feel free to
+<a href="https://discourse.nixos.org/t/nix-authenticated-fetches-from-gitlab-reading-about-related-work/35708.">discuss</a></p>
+<p>Alos, feel free to get in touch with me with the information shared on <a href="https://github.com/kolloch">my
+GitHub profile kolloch</a> or <a href="https://twitter.com/pkolloch">Twitter
+@pkolloch</a>.</p>
+
+    </div>
+
+    
+    
+
+    <div class="post-footer">
+        
+            
+                <div class="post-tags">
+                    
+                        <a href="https://blog.eigenvalue.net/tags/nix/">#nix</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/authentication/">#authentication</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/gitlab/">#GitLab</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/private/">#private</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/fetch/">#fetch</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/libfetchers/">#libfetchers</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/builtin-fetchers/">#builtin fetchers</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/fod/">#FOD</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/derivations/">#derivations</a>
+                    
+                </div>
+            
+            
+
+        
+
+    </div>
+
+    
+    
+</article>
+
+
+                </div>
+            </main>
+
+            
+            
+        </div>
+
+      
+          <script type="text/javascript" src="https://blog.eigenvalue.net/even.js" ></script>
+      
+    </body>
+
+</html>

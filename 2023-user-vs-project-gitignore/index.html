@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title>Peter Kolloch - Blog - .gitignore: Project vs Global Ignore Patterns</title>
+
+      <link rel=icon href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">λ</text></svg>'>
+
+      <link rel="alternate" type="application/rss+xml" title="RSS" href="https://blog.eigenvalue.net/rss.xml">
+
+      
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/slideout/1.0.1/slideout.min.js"></script>
+          
+      
+
+      
+          <link href="https://fonts.googleapis.com/css2?family=Gudea&display=swap" rel="stylesheet">
+          <link rel="stylesheet" href="https://blog.eigenvalue.net/site.css">
+          
+      
+
+      
+      
+    </head>
+
+    <body>
+        <div class="container">
+
+            <div id="mobile-navbar" class="mobile-navbar">
+              <div class="mobile-header-logo">
+                <a href="/" class="logo">Peter Kolloch</a>
+              </div>
+              <div class="mobile-navbar-icon icon-out">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+
+            <nav id="mobile-menu" class="mobile-menu slideout-menu slideout-menu-left">
+              <ul class="mobile-menu-list">
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                            Home
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                            Tags
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                            About
+                        </a>
+                    </li>
+                
+              </ul>
+            </nav>
+
+            <header id="header">
+                <div class="logo"><a href="https:&#x2F;&#x2F;blog.eigenvalue.net">Peter Kolloch</a></div>
+                <nav class="menu">
+                    <ul>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                                    Home
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                                    Tags
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                                    About
+                                </a>
+                            </li>
+                        
+                    </ul>
+                </nav>
+            </header>
+
+            <main>
+                <div class="content" id="mobile-panel">
+                    
+
+
+
+<article class="post">
+    
+    <header class="post__header">
+        <h1 class="post__title">
+            <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;2023-user-vs-project-gitignore&#x2F;">.gitignore: Project vs Global Ignore Patterns</a>
+        </h1>
+        <div class="post__meta">
+            <span class="post__time">2023-12-10</span>
+            
+        </div>
+    </header>
+
+    <div class="post-content">
+      <p>Global <code>.gitignore</code> files?</p>
+<p>Recently, I wanted to add Mac OS finder's <code>.DS_Store</code> files to a project's
+.gitignore. A reviewer immediately objected to this: &quot;This should be added to
+the user's ignore file, not the project's.&quot;</p>
+<p>Huh! I didn't even know that existed!</p>
+<h2 id="global-gitignore">&quot;Global&quot; .gitignore</h2>
+<p>If you have a look at <a href="https://git-scm.com/docs/gitignore">git's .gitignore
+documentation</a>, you'll see that there are
+four sources of ignore patterns that <code>git</code> considers:</p>
+<ol>
+<li>from command line flags, where applicable,</li>
+<li>from <code>.gitignore</code> files in project directories,</li>
+<li><code>.git/info/exclude</code> in the project directory,</li>
+<li>AND, tadaah, I didn't know about that at all: from a file specified in the
+<code>core.excludesFile</code> option.</li>
+</ol>
+<p>While there is not a standard place for a &quot;global&quot; gitignore file, you can add
+one to your &quot;global&quot; user git config. Here you can specify ignore patterns for
+all your git projects.</p>
+<h2 id="does-it-make-sense">Does it make sense?</h2>
+<p>Now back to the reviewer's objection: Does it make sense to use a global
+gitignore file for platform-specific files such as <code>.DS_Store</code>.</p>
+<p>You could argue:</p>
+<ol>
+<li>Total work: If everyone puts the relevant files into their global gitignore
+files, then we don't have to put them into project-specific gitignore
+files. There are more projects than developer machines, so that is a clear
+win.</li>
+<li>Minimal: People using Linux or Windows will not suffer from too many ignored
+patterns.</li>
+</ol>
+<h2 id="wrong">Wrong</h2>
+<p>Ok, not formally wrong but in my opinion irrelevant. So wrong in the typical
+blog post way of things ;). If you assumed that everyone has a proper global
+gitignore file, then you'd have to</p>
+<ol>
+<li>Be annoyed about <code>.DS_Store</code> files occasionally sneaking into your merge requests,</li>
+<li>Educate people about its existence, and</li>
+<li>Maybe argue about the best way.</li>
+</ol>
+<p>Instead, if there is no danger that your project will ever want to check in
+<code>.DS_Store</code> files, you can just add one or two additional patterns to the
+project <code>.gitignore</code> file and be done with it.</p>
+<p>Simplify your life!</p>
+<p>I am guilty with creating many long/messy <code>.gitignore</code> files, adding stuff to
+them whenever opportune. I never regretted that. But I WAS occasionally annoyed missing
+<code>.gitignore</code> patterns.</p>
+<p>I never struggled from too many ignore patterns. They always just work fine.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>We spend a lot of effort to make it easy to onboard new developers to projects.
+Or at least we should, if we want collaboration. Instead of longer onboarding
+guides with what tools to set up, I prefer tools like <code>nix</code> or any other way to
+specify toolchain versions etc.</p>
+<p>Why then, should we make assumptions about the setup of developer machines where
+we can do without?</p>
+<p>Make your project friendly to developers of different platforms and let them
+include <code>.gitignore</code> patterns that apply to their OS, their tools, their editors.</p>
+<p>Obviously, this is my opinion and I'd love to find out if you disagree! Maybe I
+have missed an important aspect? Feel free to get in touch with me with the
+information shared on my GitHub profile: <a href="https://github.com/kolloch">kolloch</a></p>
+
+    </div>
+
+    
+    
+
+    <div class="post-footer">
+        
+            
+                <div class="post-tags">
+                    
+                        <a href="https://blog.eigenvalue.net/tags/git/">#git</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/gitignore/">#gitignore</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/ds-store/">#.DS_Store</a>
+                    
+                </div>
+            
+            
+
+        
+
+    </div>
+
+    
+    
+</article>
+
+
+                </div>
+            </main>
+
+            
+            
+        </div>
+
+      
+          <script type="text/javascript" src="https://blog.eigenvalue.net/even.js" ></script>
+      
+    </body>
+
+</html>

@@ -1,0 +1,1858 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Peter Kolloch - Blog</title>
+      <link>https://blog.eigenvalue.net</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.eigenvalue.net/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Thu, 11 Jan 2024 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>Tutorial: Building our Astro Starlight page with Nix &amp; flake.parts</title>
+          <pubDate>Thu, 11 Jan 2024 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/2024-astro-starlight-with-nix/</link>
+          <guid>https://blog.eigenvalue.net/2024-astro-starlight-with-nix/</guid>
+          <description>&lt;p&gt;Recently, I migrated the unwieldy README.md of
+crate2nix to &lt;a href=&quot;https:&#x2F;&#x2F;nix-community.github.io&#x2F;crate2nix&#x2F;&quot;&gt;a much more structured GitHub page&lt;&#x2F;a&gt;. 
+After some research, I settled on
+&lt;a href=&quot;https:&#x2F;&#x2F;astro.build&#x2F;&quot;&gt;Astro&lt;&#x2F;a&gt; with the &lt;a href=&quot;https:&#x2F;&#x2F;starlight.astro.build&#x2F;&quot;&gt;Starlight Theme&lt;&#x2F;a&gt;
+since I had head good things about Astro at the NixCon 2023 in Darmstadt (happy times!).&lt;&#x2F;p&gt;
+&lt;p&gt;This is an especially appealing choice if you want to&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;start easy with mostly simple documentation in &lt;code&gt;*.md&lt;&#x2F;code&gt; files, but&lt;&#x2F;li&gt;
+&lt;li&gt;potentially later extend it with some client-side logic with &lt;a href=&quot;https:&#x2F;&#x2F;react.dev&#x2F;&quot;&gt;React&lt;&#x2F;a&gt;.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;But on we go! Let&#x27;s get our GitHub Page up and running. &lt;&#x2F;p&gt;
+&lt;h2 id=&quot;what-you-need-to-get-started&quot;&gt;What you need to get started&lt;&#x2F;h2&gt;
+&lt;p&gt;This is a follow up on &lt;a href=&quot;..&#x2F;2024-flake-parts-nodejs-devshell&quot;&gt;Tutorial: Using flake-parts to set up a nodejs devshell&lt;&#x2F;a&gt;. We assume that you already have set up&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;a flake-based project using &lt;a href=&quot;https:&#x2F;&#x2F;flake.parts&#x2F;&quot;&gt;flake.parts&lt;&#x2F;a&gt;, and&lt;&#x2F;li&gt;
+&lt;li&gt;setup a devshell with the right version of &lt;code&gt;npm&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;creating-the-docs-directory&quot;&gt;Creating the docs directory&lt;&#x2F;h2&gt;
+&lt;p&gt;Now that we have &lt;code&gt;npm&lt;&#x2F;code&gt; at hand, we can follow the instructions of Starlight
+on how to get started and answer the prompts as they come:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;console&quot; class=&quot;language-console &quot;&gt;&lt;code class=&quot;language-console&quot; data-lang=&quot;console&quot;&gt;❯ npm create astro@latest -- --template starlight
+
+ astro   Launch sequence initiated.
+
+   dir   Where should we create your new project?
+         .&amp;#x2F;docs
+      ◼  tmpl Using starlight as project template
+
+  deps   Install dependencies?
+         Yes
+
+    ts   Do you plan to write TypeScript?
+         Yes
+
+   use   How strict should TypeScript be?
+         Strict
+
+   git   Initialize a new git repository?
+         No
+      ◼  Sounds good! You can always run git init manually.
+
+      ✔  Project initialized!
+         ■ Template copied
+         ■ Dependencies installed
+         ■ TypeScript customized
+
+  next   Liftoff confirmed. Explore your project!
+
+         Enter your project directory using cd .&amp;#x2F;docs
+         Run npm run dev to start the dev server. CTRL+C to stop.
+         Add frameworks like react or tailwind using astro add.
+
+         Stuck? Join us at https:&amp;#x2F;&amp;#x2F;astro.build&amp;#x2F;chat
+
+╭──🎁─╮  Houston:
+│ ◠ ◡ ◠  Good luck out there, astronaut! 🚀
+╰─────╯
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;local-development&quot;&gt;Local development&lt;&#x2F;h2&gt;
+&lt;p&gt;For local development, you can use a fast turn-around npm-based
+workflow:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;console&quot; class=&quot;language-console &quot;&gt;&lt;code class=&quot;language-console&quot; data-lang=&quot;console&quot;&gt;❯ npm run dev
+
+&amp;gt; docs@0.0.1 dev
+&amp;gt; astro dev
+
+
+ astro  v4.1.1 ready in 590 ms
+
+┃ Local    http:&amp;#x2F;&amp;#x2F;localhost:4321&amp;#x2F;
+┃ Network  use --host to expose
+
+23:13:21 [WARN] [content] The i18n collection is defined but no content&amp;#x2F;i18n folder exists in the content directory. Create a new folder for the collection, or check your content configuration file for typos.
+23:13:21 watching for file changes...
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The exposed web server will update as you edit or
+display any potential errors.&lt;&#x2F;p&gt;
+&lt;p&gt;The &lt;code&gt;npm&lt;&#x2F;code&gt; and &lt;code&gt;node&lt;&#x2F;code&gt; are supplied by nix and all
+collaborators with nix and direnv will seamlessly
+have the same version available.&lt;&#x2F;p&gt;
+&lt;p&gt;But what about reproducible production builds?&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;hermetic-build-with-nix&quot;&gt;Hermetic build with nix&lt;&#x2F;h2&gt;
+&lt;p&gt;Let&#x27;s say we are satisfied with our edits and want a reproducible
+build of our docs. Copy the following as &lt;code&gt;flake-module.nix&lt;&#x2F;code&gt;
+into your docs folder:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;# docs&amp;#x2F;flake-module.nix
+{
+perSystem = { config, self&amp;#x27;, inputs&amp;#x27;, pkgs, lib, system, ... }: {
+    packages.docs = pkgs.buildNpmPackage {
+      pname = &amp;quot;docs&amp;quot;;
+      version = &amp;quot;0.1.0&amp;quot;;
+
+      inherit (config.packages) nodejs;
+
+      src = .&amp;#x2F;.;
+
+      buildInputs = [
+        pkgs.vips
+      ];
+
+      nativeBuildInputs = [
+        pkgs.pkg-config
+      ];
+
+      installPhase = &amp;#x27;&amp;#x27;
+        runHook preInstall
+        cp -pr --reflink=auto dist $out&amp;#x2F;
+        runHook postInstall
+      &amp;#x27;&amp;#x27;;
+
+      npmDepsHash = &amp;quot;&amp;quot;;
+    };
+  };
+}
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;You remember our drill from the last article? You have to
+add the new &lt;code&gt;.&#x2F;docs&#x2F;flake-module.nix&lt;&#x2F;code&gt; to the imports
+in your &lt;code&gt;flake.nix&lt;&#x2F;code&gt; and ensure that all relevant files
+have been added to the git index with &lt;code&gt;git add&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;You can now try to build your docs like this:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;nix build -L .#docs
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Did you notice the empty string for the &lt;code&gt;npmDepsHash&lt;&#x2F;code&gt;
+before? Well, now nix will complain about this while also
+telling us the expected value:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;console&quot; class=&quot;language-console &quot;&gt;&lt;code class=&quot;language-console&quot; data-lang=&quot;console&quot;&gt;...
+warning: found empty hash, assuming &amp;#x27;sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=&amp;#x27;
+error: hash mismatch in fixed-output derivation &amp;#x27;&amp;#x2F;nix&amp;#x2F;store&amp;#x2F;mpnydavlxdww9fv2n2aic5mwnapnch7f-docs-0.1.0-npm-deps.drv&amp;#x27;:
+         specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+            got:    sha256-iyz7+GeVYNDa0cLlz8PGmTNAQVetnt87ndfP0vUjxLw=
+error: 1 dependencies of derivation &amp;#x27;&amp;#x2F;nix&amp;#x2F;store&amp;#x2F;dcrayn9gy58hk0raq53ssca3h2js3alp-docs-0.1.0.drv&amp;#x27; failed to build
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We&#x27;ll update &lt;code&gt;npmDepsHash&lt;&#x2F;code&gt; accordingly in our &lt;code&gt;flake-module.nix&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;{
+  # ...
+      npmDepsHash = &amp;quot;sha256-iyz7+GeVYNDa0cLlz8PGmTNAQVetnt87ndfP0vUjxLw=&amp;quot;;
+  # ...
+}
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;NOTE: Your hash value will be different if any of the dependencies have
+a new version in the starlight template! Use the hash that nix has
+output behind &amp;quot;got.&amp;quot;&lt;&#x2F;p&gt;
+&lt;p&gt;Now &lt;code&gt;nix build .#docs&lt;&#x2F;code&gt; should build your docs, store them in the &lt;code&gt;&#x2F;nix&#x2F;store&lt;&#x2F;code&gt;
+and provide a symlink called &lt;code&gt;result&lt;&#x2F;code&gt; to them:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;console&quot; class=&quot;language-console &quot;&gt;&lt;code class=&quot;language-console&quot; data-lang=&quot;console&quot;&gt;❯ ls -al result&amp;#x2F;
+total 72
+dr-xr-xr-x      9 root  wheel       288 Jan  1  1970 .
+drwxrwxr-t@ 65535 root  nixbld  5130176 Jan 11 23:33 ..
+-r--r--r--      1 root  wheel      8474 Jan  1  1970 404.html
+dr-xr-xr-x     10 root  wheel       320 Jan  1  1970 _astro
+-r--r--r--      1 root  wheel       696 Jan  1  1970 favicon.svg
+dr-xr-xr-x      3 root  wheel        96 Jan  1  1970 guides
+-r--r--r--      1 root  wheel     17758 Jan  1  1970 index.html
+dr-xr-xr-x     14 root  wheel       448 Jan  1  1970 pagefind
+dr-xr-xr-x      3 root  wheel        96 Jan  1  1970 reference
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Woooo! Our docs!&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;gitignore&quot;&gt;.gitignore&lt;&#x2F;h2&gt;
+&lt;p&gt;Well, when committing our changes, we&#x27;ll see the &amp;quot;result&amp;quot; symlink.&lt;&#x2F;p&gt;
+&lt;p&gt;We should add it to &lt;code&gt;.gitignore&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;echo &amp;quot;result*&amp;quot; &amp;gt;&amp;gt;.gitignore
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The star makes it also cover builds with multiple results.&lt;&#x2F;p&gt;
+&lt;p&gt;Why didn&#x27;t we create a &lt;code&gt;.gitignore&lt;&#x2F;code&gt; for the &lt;code&gt;npm_modules&lt;&#x2F;code&gt; etc? It
+was already done for us by the starlight template.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h2&gt;
+&lt;p&gt;It was easy to build our Starlight page with nix.
+But this is mostly useful, if we also deploy it somewhere!&lt;&#x2F;p&gt;
+&lt;p&gt;Let&#x27;s do that in the next episode of this tutorial.&lt;&#x2F;p&gt;
+&lt;p&gt;Feel free to give me feedback&#x2F;ask questions at &lt;a href=&quot;https:&#x2F;&#x2F;discourse.nixos.org&#x2F;t&#x2F;tutorial-using-flake-parts-to-set-up-a-nodejs-devshell&#x2F;37940&quot;&gt;discourse&lt;&#x2F;a&gt; or in a
+&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&#x2F;blog.eigenvalue.net&#x2F;issues&quot;&gt;GitHub issue&lt;&#x2F;a&gt;. I want
+to hear your thoughts: so feel free to err on the side of commenting too much.&lt;&#x2F;p&gt;
+</description>
+      </item>
+      <item>
+          <title>Tutorial: Using flake-parts to set up a nodejs devshell</title>
+          <pubDate>Sat, 06 Jan 2024 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/2024-flake-parts-nodejs-devshell/</link>
+          <guid>https://blog.eigenvalue.net/2024-flake-parts-nodejs-devshell/</guid>
+          <description>&lt;p&gt;Do you want setup a reproducible nodejs version for your project? And you
+want to use nix to execute npm&#x2F;nodejs directly on your OS (Linux&#x2F;MacOS&#x2F;WSL2)
+-- rather than a heavy-weight &lt;a href=&quot;https:&#x2F;&#x2F;containers.dev&#x2F;&quot;&gt;devcontainer&lt;&#x2F;a&gt; using Docker?&lt;&#x2F;p&gt;
+&lt;p&gt;It is not difficult per-se but it took a while for me to assemble all the bits
+and pieces. Let&#x27;s make it easier for you!&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;requirements&quot;&gt;Requirements&lt;&#x2F;h2&gt;
+&lt;ol&gt;
+&lt;li&gt;flake-enabled &lt;code&gt;nix&lt;&#x2F;code&gt; - copy the installation shell script from &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;DeterminateSystems&#x2F;nix-installer&#x2F;blob&#x2F;main&#x2F;README.md&quot;&gt;nix-installer&lt;&#x2F;a&gt; if you haven&#x27;t installed it
+already.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;direnv.net&#x2F;&quot;&gt;&lt;code&gt;direnv&lt;&#x2F;code&gt;&lt;&#x2F;a&gt; - if you haven&#x27;t installed it already:
+&lt;ol&gt;
+&lt;li&gt;Use the &lt;code&gt;direnv&lt;&#x2F;code&gt; package from nixpkgs, e.g. with &lt;code&gt;nix profile install nixpkgs#direnv&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;li&gt;Add &lt;code&gt;eval &amp;quot;$(direnv hook bash)&amp;quot;&lt;&#x2F;code&gt; to your &lt;code&gt;.bashrc&lt;&#x2F;code&gt; or &lt;code&gt;eval &amp;quot;$(direnv hook bash)&amp;quot;&lt;&#x2F;code&gt;
+to your &lt;code&gt;.zshrc&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;I assume an existing git repository. If not at hand, create a new directory and
+execute &lt;code&gt;git init&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;h2 id=&quot;setup-flake-nix-with-flake-parts&quot;&gt;Setup flake.nix with flake-parts&lt;&#x2F;h2&gt;
+&lt;p&gt;The example code uses &lt;a href=&quot;https:&#x2F;&#x2F;flake.parts&#x2F;&quot;&gt;flake.parts&lt;&#x2F;a&gt;. You can start with
+this flake.nix template:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;# flake.nix &amp;quot;flake&amp;quot; &amp;quot;imports&amp;quot;
+{
+  inputs = {
+    nixpkgs.url = &amp;quot;nixpkgs&amp;quot;;
+
+    flake-parts = {
+      url = &amp;quot;github:hercules-ci&amp;#x2F;flake-parts&amp;quot;;
+      inputs.nixpkgs-lib.follows = &amp;quot;nixpkgs&amp;quot;;
+    };
+
+    # Development
+
+    devshell = {
+      url = &amp;quot;github:numtide&amp;#x2F;devshell&amp;quot;;
+      inputs.nixpkgs.follows = &amp;quot;nixpkgs&amp;quot;;
+    };
+  };
+  
+  outputs = inputs@{ self, nixpkgs, flake-parts, devshell }: flake-parts.lib.mkFlake { inherit inputs; } {
+    systems = [ &amp;quot;x86_64-linux&amp;quot; &amp;quot;aarch64-linux&amp;quot; &amp;quot;aarch64-darwin&amp;quot; &amp;quot;x86_64-darwin&amp;quot; ];
+
+    imports = [];
+
+    flake = {
+      # your existing definitions before using flake-parts...
+    };
+  };
+}
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;If you need to quick&amp;amp;dirty migrate a few existing flake attributes,
+you can stuff them into &amp;quot;flake&amp;quot; and refactor later.&lt;&#x2F;p&gt;
+&lt;p&gt;Quickly check if you made any error:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;console&quot; class=&quot;language-console &quot;&gt;&lt;code class=&quot;language-console&quot; data-lang=&quot;console&quot;&gt;$ git add flake.nix
+$ nix flake check
+warning: Git tree &amp;#x27;&amp;#x2F;Users&amp;#x2F;...&amp;#x2F;projects&amp;#x2F;astro-starlight-with-nix&amp;#x27; is dirty
+warning: The check omitted these incompatible systems: aarch64-linux, x86_64-darwin, x86_64-linux
+Use &amp;#x27;--all-systems&amp;#x27; to check all.
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;You can ignore the warnings but you need to fix any errors.&lt;&#x2F;p&gt;
+&lt;p&gt;If you look at &lt;code&gt;git status&lt;&#x2F;code&gt;, yet another file appeared: &lt;code&gt;flake.lock&lt;&#x2F;code&gt; That&#x27;s
+good, it contains the exact versions of our dependencies. It should
+be committed with the rest.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;choose-nodejs-version&quot;&gt;Choose nodejs version&lt;&#x2F;h2&gt;
+&lt;p&gt;Alright. For astro&#x2F;starlight, we are going to need &lt;code&gt;nodejs&lt;&#x2F;code&gt; with &lt;code&gt;npm&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;Let&#x27;s chose a nodejs version and put it into the exported
+packages of the flake. That way we can already test run it
+and refer to it from other config files:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;# flake-modules&amp;#x2F;nodejs-packages.nix
+{
+  perSystem = { pkgs, ... }: {
+    packages.nodejs = pkgs.nodejs_21;
+  };
+}
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Now add this file to the imports in &lt;code&gt;flake.nix&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;# flake.nix
+# ...
+  imports = [
+    .&amp;#x2F;flake-modules&amp;#x2F;nodejs-packages.nix
+  ];
+# ...
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Add the file to git and execute &lt;code&gt;nix flake check&lt;&#x2F;code&gt; to notice any errors.&lt;&#x2F;p&gt;
+&lt;p&gt;We can also test the nodejs version that we chose:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;console&quot; class=&quot;language-console &quot;&gt;&lt;code class=&quot;language-console&quot; data-lang=&quot;console&quot;&gt;❯ nix run .#nodejs
+warning: Git tree &amp;#x27;&amp;#x2F;Users&amp;#x2F;...&amp;#x2F;projects&amp;#x2F;astro-starlight-with-nix&amp;#x27; is dirty
+Welcome to Node.js v21.5.0.
+Type &amp;quot;.help&amp;quot; for more information.
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;setup-devshell&quot;&gt;Setup devshell&lt;&#x2F;h2&gt;
+&lt;p&gt;This is not so convenient... yet.&lt;&#x2F;p&gt;
+&lt;p&gt;Let&#x27;s make sure that we and our contributors all use the same version!&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;# flake-modules&amp;#x2F;nodejs-devshell.nix
+{ inputs, ...}: {
+  imports = [
+    inputs.devshell.flakeModule
+  ];
+
+  perSystem = { config, ... }: {
+    devshells.default = {
+      commands = [
+        { package = config.packages.nodejs; category = &amp;quot;docs&amp;quot;; }
+      ];
+    };
+  };
+}
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Notice the &lt;code&gt;config.packages.nodejs&lt;&#x2F;code&gt;? Here we are referring
+to the nodejs package definition that we setup before.&lt;&#x2F;p&gt;
+&lt;p&gt;Now add this file to the imports in &lt;code&gt;flake.nix&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix &quot;.&#x2F;flake-modules&#x2F;nodejs-devshell.nix&quot;&quot; class=&quot;language-nix &quot;.&#x2F;flake-modules&#x2F;nodejs-devshell.nix&quot; &quot;&gt;&lt;code class=&quot;language-nix &quot;.&#x2F;flake-modules&#x2F;nodejs-devshell.nix&quot;&quot; data-lang=&quot;nix &quot;.&#x2F;flake-modules&#x2F;nodejs-devshell.nix&quot;&quot;&gt;# flake.nix
+# ...
+    imports = [
+      .&amp;#x2F;flake-modules&amp;#x2F;nodejs-packages.nix
+      .&amp;#x2F;flake-modules&amp;#x2F;nodejs-devshell.nix
+    ];
+# ...
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;And now add the new file to git and run &lt;code&gt;nix flake check&lt;&#x2F;code&gt;.
+Noticing a pattern? Well, get used to it ;)&lt;&#x2F;p&gt;
+&lt;p&gt;Now we can enter a devshell with &lt;code&gt;node&lt;&#x2F;code&gt; and &lt;code&gt;npm&lt;&#x2F;code&gt; provided
+by nix:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;console&quot; class=&quot;language-console &quot;&gt;&lt;code class=&quot;language-console&quot; data-lang=&quot;console&quot;&gt;❯ nix develop
+warning: Git tree &amp;#x27;&amp;#x2F;Users&amp;#x2F;...&amp;#x2F;projects&amp;#x2F;astro-starlight-with-nix&amp;#x27; is dirty
+🔨 Welcome to devshell
+
+[[general commands]]
+
+  menu   - prints this menu
+
+[docs]
+
+  nodejs - Event-driven I&amp;#x2F;O framework for the V8 JavaScript engine
+
+[devshell]$ which npm
+&amp;#x2F;nix&amp;#x2F;store&amp;#x2F;3h53w5zkwpyapp8510d6ivmhmf47x0bs-devshell-dir&amp;#x2F;bin&amp;#x2F;npm
+[devshell]$ which node
+&amp;#x2F;nix&amp;#x2F;store&amp;#x2F;3h53w5zkwpyapp8510d6ivmhmf47x0bs-devshell-dir&amp;#x2F;bin&amp;#x2F;node
+[devshell]$
+exit
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;You can exit the shell on Unix-like OSes with CTRL+D or by typing &amp;quot;exit&amp;quot;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;adding-an-envrc-for-direnv&quot;&gt;Adding an .envrc for direnv&lt;&#x2F;h2&gt;
+&lt;p&gt;All this entering and exiting. Here come direnv to automate that step for us!&lt;&#x2F;p&gt;
+&lt;p&gt;Create a new file:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;# .envrc
+#!&amp;#x2F;usr&amp;#x2F;bin&amp;#x2F;env bash
+# ^ make editor happy
+
+#
+# Use https:&amp;#x2F;&amp;#x2F;direnv.net&amp;#x2F; to automatically load the dev shell.
+#
+
+# Update this by looking at https:&amp;#x2F;&amp;#x2F;github.com&amp;#x2F;nix-community&amp;#x2F;nix-direnv#installation
+# under &amp;quot;Direnv source&amp;quot;
+if ! has nix_direnv_version || ! nix_direnv_version 3.0.4; then
+  source_url &amp;quot;https:&amp;#x2F;&amp;#x2F;raw.githubusercontent.com&amp;#x2F;nix-community&amp;#x2F;nix-direnv&amp;#x2F;3.0.4&amp;#x2F;direnvrc&amp;quot; &amp;quot;sha256-DzlYZ33mWF&amp;#x2F;Gs8DDeyjr8mnVmQGx7ASYqA5WlxwvBG4=&amp;quot;
+fi  
+
+watch_file -- flake-modules&amp;#x2F;*.nix
+use flake . --show-trace
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;If you press enter on the shell prompt now and you have &lt;code&gt;direnv&lt;&#x2F;code&gt; set up
+properly, you should get something like:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;console&quot; class=&quot;language-console &quot;&gt;&lt;code class=&quot;language-console&quot; data-lang=&quot;console&quot;&gt;direnv: error &amp;#x2F;Users&amp;#x2F;...&amp;#x2F;projects&amp;#x2F;astro-starlight-with-nix&amp;#x2F;.envrc is blocked. Run `direnv allow` to approve its content
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Well, we&#x27;ll do as we are told:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;console&quot; class=&quot;language-console &quot;&gt;&lt;code class=&quot;language-console&quot; data-lang=&quot;console&quot;&gt;❯ direnv allow .
+direnv: loading ~&amp;#x2F;projects&amp;#x2F;astro-starlight-with-nix&amp;#x2F;.envrc
+direnv: loading https:&amp;#x2F;&amp;#x2F;raw.githubusercontent.com&amp;#x2F;nix-community&amp;#x2F;nix-direnv&amp;#x2F;3.0.4&amp;#x2F;direnvrc (sha256-DzlYZ33mWF&amp;#x2F;Gs8DDeyjr8mnVmQGx7ASYqA5WlxwvBG4=)
+direnv: using flake . --show-trace
+direnv: nix-direnv: using cached dev shell
+🔨 Welcome to devshell
+
+[[general commands]]
+
+  menu   - prints this menu
+
+[docs]
+
+  nodejs - Event-driven I&amp;#x2F;O framework for the V8 JavaScript engine
+
+direnv: export +DEVSHELL_DIR +IN_NIX_SHELL +NIXPKGS_PATH +PRJ_DATA_DIR +PRJ_ROOT +name ~PATH ~XDG_DATA_DIRS
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Awesome! Now we have &lt;code&gt;npm&lt;&#x2F;code&gt; and &lt;code&gt;nodejs&lt;&#x2F;code&gt; with the chosen version in our PATH
+whenever we are in this directory.&lt;&#x2F;p&gt;
+&lt;p&gt;It also creates a &lt;code&gt;.direnv&lt;&#x2F;code&gt; folder that you probably want to add to your &lt;code&gt;.gitignore&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;echo &amp;quot;.direnv&amp;quot; &amp;gt;&amp;gt;.gitignore
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;checking-your-flake-with-nix-repl&quot;&gt;Checking your flake with &lt;code&gt;nix repl&lt;&#x2F;code&gt;&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;code&gt;nix repl&lt;&#x2F;code&gt; would deserve its own blog article or book but to get your started:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;console &quot;:lf .&quot;&quot; class=&quot;language-console &quot;:lf .&quot; &quot;&gt;&lt;code class=&quot;language-console &quot;:lf .&quot;&quot; data-lang=&quot;console &quot;:lf .&quot;&quot;&gt;❯ nix repl
+Welcome to Nix 2.18.1. Type :? for help.
+
+nix-repl&amp;gt; :lf .
+warning: Git tree &amp;#x27;&amp;#x2F;Users&amp;#x2F;peterkolloch&amp;#x2F;projects&amp;#x2F;astro-starlight-with-nix&amp;#x27; is dirty
+Added 20 variables.
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;code&gt;:lf .&lt;&#x2F;code&gt; stands for &amp;quot;load flake&amp;quot; and has to be followed by a path. Here,
+the current directory.&lt;&#x2F;p&gt;
+&lt;p&gt;Now the &lt;code&gt;outputs&lt;&#x2F;code&gt; of the flake are discoverable in the &lt;code&gt;outputs&lt;&#x2F;code&gt; attribute
+in the shell. You can use tab completion (i.e. hit TAB after &lt;code&gt;outputs.&lt;&#x2F;code&gt;):&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;console&quot; class=&quot;language-console &quot;&gt;&lt;code class=&quot;language-console&quot; data-lang=&quot;console&quot;&gt;nix-repl&amp;gt; outputs.
+outputs.apps                 outputs.checks               outputs.devShells            outputs.formatter            outputs.legacyPackages       outputs.nixosConfigurations  outputs.nixosModules         outputs.overlays             outputs.packages
+nix-repl&amp;gt; outputs.devShells
+outputs.devShells
+nix-repl&amp;gt; outputs.devShells.
+outputs.devShells.aarch64-darwin  outputs.devShells.aarch64-linux   outputs.devShells.x86_64-darwin   outputs.devShells.x86_64-linux
+nix-repl&amp;gt; outputs.devShells.aarch64-darwin.default
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;You see that there are attributes for each &lt;code&gt;system&lt;&#x2F;code&gt; (architecture) that 
+we defined our flake for.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;updating-all-dependencies&quot;&gt;Updating all dependencies&lt;&#x2F;h2&gt;
+&lt;p&gt;If you want to use a &lt;code&gt;nodejs&lt;&#x2F;code&gt; version from a more recent nixpkgs later,
+you&#x27;ll have to update your flake dependencies. That is as easy as:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;nix flake update
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;vscode-support&quot;&gt;VSCode support&lt;&#x2F;h2&gt;
+&lt;p&gt;Did you know that you can actually force VSCode and some other IDEs to use
+exactly the same nodejs version for builds that you specified?&lt;&#x2F;p&gt;
+&lt;p&gt;For VSCode you can use the &lt;a href=&quot;https:&#x2F;&#x2F;marketplace.visualstudio.com&#x2F;items?itemName=Rubymaniac.vscode-direnv&quot;&gt;direnv&lt;&#x2F;a&gt; plugin. There are a couple of them. This
+is the one that I use currently.&lt;&#x2F;p&gt;
+&lt;p&gt;To help fellow VSCode users find the extension quickly, you can add the following
+file to the project:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;json&quot; class=&quot;language-json &quot;&gt;&lt;code class=&quot;language-json&quot; data-lang=&quot;json&quot;&gt;&amp;#x2F;&amp;#x2F; .vscode&amp;#x2F;extensions.json
+{
+    &amp;quot;recommendations&amp;quot;: [
+        &amp;quot;rubymaniac.vscode-direnv&amp;quot;
+    ]
+}
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h2&gt;
+&lt;p&gt;Now we have set up a very simple dev shell with a pinned nodejs version
+that is convenient to use. That is a big help to onboard anyone onto the project.&lt;&#x2F;p&gt;
+&lt;p&gt;We did it step-by step by adding little tiny &lt;code&gt;flake-module.nix&lt;&#x2F;code&gt; files to our flake.
+This was convenient for this tutorial but actually also works well in practice.
+If you scope one &lt;code&gt;flake-module.nix&lt;&#x2F;code&gt; to one purpose, it remains easy to understand.&lt;&#x2F;p&gt;
+&lt;p&gt;A good basis - let&#x27;s soon add more on top! For example,
+a documentation site built with the astro framework:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a href=&quot;..&#x2F;2024_astro_starlight_with_nix&quot;&gt;Tutorial: Building our Astro Starlight page with Nix &amp;amp; flake.parts&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Feel free to give me feedback&#x2F;ask questions at &lt;a href=&quot;https:&#x2F;&#x2F;discourse.nixos.org&#x2F;t&#x2F;tutorial-using-flake-parts-to-set-up-a-nodejs-devshell&#x2F;37940&quot;&gt;discourse&lt;&#x2F;a&gt; or in a
+&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&#x2F;blog.eigenvalue.net&#x2F;issues&quot;&gt;GitHub issue&lt;&#x2F;a&gt;. I want
+to hear your thoughts so feel free to err on the side of commenting too much.&lt;&#x2F;p&gt;
+</description>
+      </item>
+      <item>
+          <title>.gitignore: Project vs Global Ignore Patterns</title>
+          <pubDate>Sun, 10 Dec 2023 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/2023-user-vs-project-gitignore/</link>
+          <guid>https://blog.eigenvalue.net/2023-user-vs-project-gitignore/</guid>
+          <description>&lt;p&gt;Global &lt;code&gt;.gitignore&lt;&#x2F;code&gt; files?&lt;&#x2F;p&gt;
+&lt;p&gt;Recently, I wanted to add Mac OS finder&#x27;s &lt;code&gt;.DS_Store&lt;&#x2F;code&gt; files to a project&#x27;s
+.gitignore. A reviewer immediately objected to this: &amp;quot;This should be added to
+the user&#x27;s ignore file, not the project&#x27;s.&amp;quot;&lt;&#x2F;p&gt;
+&lt;p&gt;Huh! I didn&#x27;t even know that existed!&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;global-gitignore&quot;&gt;&amp;quot;Global&amp;quot; .gitignore&lt;&#x2F;h2&gt;
+&lt;p&gt;If you have a look at &lt;a href=&quot;https:&#x2F;&#x2F;git-scm.com&#x2F;docs&#x2F;gitignore&quot;&gt;git&#x27;s .gitignore
+documentation&lt;&#x2F;a&gt;, you&#x27;ll see that there are
+four sources of ignore patterns that &lt;code&gt;git&lt;&#x2F;code&gt; considers:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;from command line flags, where applicable,&lt;&#x2F;li&gt;
+&lt;li&gt;from &lt;code&gt;.gitignore&lt;&#x2F;code&gt; files in project directories,&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;.git&#x2F;info&#x2F;exclude&lt;&#x2F;code&gt; in the project directory,&lt;&#x2F;li&gt;
+&lt;li&gt;AND, tadaah, I didn&#x27;t know about that at all: from a file specified in the
+&lt;code&gt;core.excludesFile&lt;&#x2F;code&gt; option.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;While there is not a standard place for a &amp;quot;global&amp;quot; gitignore file, you can add
+one to your &amp;quot;global&amp;quot; user git config. Here you can specify ignore patterns for
+all your git projects.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;does-it-make-sense&quot;&gt;Does it make sense?&lt;&#x2F;h2&gt;
+&lt;p&gt;Now back to the reviewer&#x27;s objection: Does it make sense to use a global
+gitignore file for platform-specific files such as &lt;code&gt;.DS_Store&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;You could argue:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Total work: If everyone puts the relevant files into their global gitignore
+files, then we don&#x27;t have to put them into project-specific gitignore
+files. There are more projects than developer machines, so that is a clear
+win.&lt;&#x2F;li&gt;
+&lt;li&gt;Minimal: People using Linux or Windows will not suffer from too many ignored
+patterns.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;h2 id=&quot;wrong&quot;&gt;Wrong&lt;&#x2F;h2&gt;
+&lt;p&gt;Ok, not formally wrong but in my opinion irrelevant. So wrong in the typical
+blog post way of things ;). If you assumed that everyone has a proper global
+gitignore file, then you&#x27;d have to&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Be annoyed about &lt;code&gt;.DS_Store&lt;&#x2F;code&gt; files occasionally sneaking into your merge requests,&lt;&#x2F;li&gt;
+&lt;li&gt;Educate people about its existence, and&lt;&#x2F;li&gt;
+&lt;li&gt;Maybe argue about the best way.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Instead, if there is no danger that your project will ever want to check in
+&lt;code&gt;.DS_Store&lt;&#x2F;code&gt; files, you can just add one or two additional patterns to the
+project &lt;code&gt;.gitignore&lt;&#x2F;code&gt; file and be done with it.&lt;&#x2F;p&gt;
+&lt;p&gt;Simplify your life!&lt;&#x2F;p&gt;
+&lt;p&gt;I am guilty with creating many long&#x2F;messy &lt;code&gt;.gitignore&lt;&#x2F;code&gt; files, adding stuff to
+them whenever opportune. I never regretted that. But I WAS occasionally annoyed missing
+&lt;code&gt;.gitignore&lt;&#x2F;code&gt; patterns.&lt;&#x2F;p&gt;
+&lt;p&gt;I never struggled from too many ignore patterns. They always just work fine.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h2&gt;
+&lt;p&gt;We spend a lot of effort to make it easy to onboard new developers to projects.
+Or at least we should, if we want collaboration. Instead of longer onboarding
+guides with what tools to set up, I prefer tools like &lt;code&gt;nix&lt;&#x2F;code&gt; or any other way to
+specify toolchain versions etc.&lt;&#x2F;p&gt;
+&lt;p&gt;Why then, should we make assumptions about the setup of developer machines where
+we can do without?&lt;&#x2F;p&gt;
+&lt;p&gt;Make your project friendly to developers of different platforms and let them
+include &lt;code&gt;.gitignore&lt;&#x2F;code&gt; patterns that apply to their OS, their tools, their editors.&lt;&#x2F;p&gt;
+&lt;p&gt;Obviously, this is my opinion and I&#x27;d love to find out if you disagree! Maybe I
+have missed an important aspect? Feel free to get in touch with me with the
+information shared on my GitHub profile: &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&quot;&gt;kolloch&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+</description>
+      </item>
+      <item>
+          <title>Nix: Authenticated Fetches from GitLab - Reading about Related Work</title>
+          <pubDate>Sun, 19 Nov 2023 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/2023-nix-fetch-with-authentication/</link>
+          <guid>https://blog.eigenvalue.net/2023-nix-fetch-with-authentication/</guid>
+          <description>&lt;p&gt;In &lt;a href=&quot;&#x2F;2023-nix-for-private-binaries&#x2F;&quot;&gt;our quest&lt;&#x2F;a&gt; to establish
+&lt;a href=&quot;https:&#x2F;&#x2F;nixos.org&quot;&gt;Nix&lt;&#x2F;a&gt; for distributing developer toolchains, we depend also
+on private, company-specific tools. We do not want to nixify every build but
+simply fetch the existing build artifacts using GitLab authentication.&lt;&#x2F;p&gt;
+&lt;p&gt;This might not be exactly what you need but I assume it is incredibly common to
+want to fetch artifacts from some authenticated API.&lt;&#x2F;p&gt;
+&lt;p&gt;I discussed this with &lt;a href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;ericson2314_&quot;&gt;John Ericson&lt;&#x2F;a&gt; and he
+gave me some pointers to current work in progress or proposals that might be
+related. Thank you!&lt;&#x2F;p&gt;
+&lt;p&gt;Not exactly being familiar with core Nix development, the impact of these issues
+is not always easy for me to understand. Therefore, I thought it might also help
+others if I published the notes while reading through the suggested material.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;nix-store-acls&quot;&gt;Nix Store ACLs&lt;&#x2F;h2&gt;
+&lt;p&gt;Reference: &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;rfcs&#x2F;pull&#x2F;143&quot;&gt;RFC 0143&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Implement a way to only allow user access to a store path if they provide
+proof that they have all the necessary sources available, or had the access
+permission explicitly granted to them.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;Well written!&lt;&#x2F;p&gt;
+&lt;p&gt;Obviously, this is related to stores and is superficially nearly the opposite to
+what we want: This is about restricting access to parts of a store -- not being
+more permissive.&lt;&#x2F;p&gt;
+&lt;p&gt;But, could we not require substitution of all private artifacts? I.e. ensure
+that all private artifacts are available in our shared Nix store (cache)? The
+fetches would just be &amp;quot;Fixed Output Derivations&amp;quot;, meaning that they already
+specify the hash of the fetched artifact, and before attempting the fetch our
+nix client would check if it is already available in the cache.&lt;&#x2F;p&gt;
+&lt;p&gt;This would not even require this RFC but simply a private Nix store, in our case
+via AWS S3.&lt;&#x2F;p&gt;
+&lt;p&gt;I have some concerns:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;The fetching &amp;quot;builder code&amp;quot; would be misleading since the intention is that it
+would never be executed. I vaguely remember there is a construct in
+&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nixpkgs&#x2F;&quot;&gt;Nixpkgs&lt;&#x2F;a&gt; that models &amp;quot;you need to download
+this independently and upload it to your store&amp;quot;, so that could be remedied.&lt;&#x2F;li&gt;
+&lt;li&gt;Someone or something would still need to get access to the artifact and
+upload it to the shared store. That might be relatively easy to achieve (e.g.
+by putting the upload into the CI&#x2F;CD pipeline of the binary) or difficult,
+depending as so often on the context. For us, it would be acceptable, even
+though I&#x27;d like to keep the CI&#x2F;CD pipelines untouched for now so that the nix
+related changes keep in a few isolated repos.&lt;&#x2F;li&gt;
+&lt;li&gt;I conceptualize the AWS S3 Store that we set up as &amp;quot;cache&amp;quot; that does not need
+to be backed up etc. The requirement of always having all private binaries
+available there, would invalidate that.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Where would the RFC be of use for us?&lt;&#x2F;p&gt;
+&lt;p&gt;The RFC itself mentions that this is probably not a good idea to use this for
+secrets. So we should not use it to e.g. store GitLab credentials in a store
+path in a protected manner. But I&#x27;ll think more about that.&lt;&#x2F;p&gt;
+&lt;p&gt;What the RFC does allow is to allow access to some binaries without making their
+full build recipes and source available. That could be nice but is generally not
+our problem: The build of the binaries is not nixified anyways and thus Nix
+doesn&#x27;t see the source. Furthermore, all our employees can see pretty much all
+our source code and we like it that way.&lt;&#x2F;p&gt;
+&lt;p&gt;In theory, the RFC could be a solution for bootstrapping: In our case, for even
+authenticating, we need certain authentication helpers. With the RFC, we could
+expose the parts of the store publicly that are strictly needed for
+bootstrapping publicly and all the rest only privately.&lt;&#x2F;p&gt;
+&lt;p&gt;But all in all, it looks quite complicated to pull off and is not a good match
+for our needs, I think.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;builtin-fetching-should-be-represented-by-derivations&quot;&gt;Builtin fetching should be represented by derivations&lt;&#x2F;h2&gt;
+&lt;p&gt;Reference: &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;9077&quot;&gt;Nix Github Issue #9077&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Currently, there are two fundamental different ways of &amp;quot;fetching&amp;quot;:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&amp;quot;built-in fetchers&amp;quot; (libfetchers): These are functions of &amp;quot;Nix the language&amp;quot; and are
+executed directly while evaluating the build tree.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&amp;quot;fixed-output derivation fetchers&amp;quot;: Nix allows them to access the network by
+virtue of an easily verifiable promise. FODs need to specify the hash of
+their output upfront.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;This has some indirect consequences which is why, depending on their needs,
+prefer one over the other.&lt;&#x2F;p&gt;
+&lt;p&gt;&amp;quot;Built-in&amp;quot; fetchers run wherever the Nix expressions are evaluated - in the
+environment of the user that invoked the build. That has an immediate
+application for us: If the user is authenticated, the fetcher also has
+access to the associated credentials!&lt;&#x2F;p&gt;
+&lt;p&gt;Yet, it also requires that we have an appropriate fetcher directly built into
+Nix, which makes this weirdly inflexible: The built-in fetchers do not e.g.
+allow setting an authentication header from an environment variable. That makes
+it impossible fetching job artifacts via &lt;a href=&quot;https:&#x2F;&#x2F;gitlab.com&#x2F;gitlab-org&#x2F;gitlab&#x2F;-&#x2F;issues&#x2F;341157&quot;&gt;the GitLab API that does not allow
+basic authentication&lt;&#x2F;a&gt;
+which would be supported via credentials via the &lt;del&gt;insanely limited, not even
+supporting passwords with spaces&lt;&#x2F;del&gt; time-proven &lt;code&gt;netrc&lt;&#x2F;code&gt; mechanism.&lt;&#x2F;p&gt;
+&lt;p&gt;In addition to this inflexibility due to the nature of being in the Nix code
+(live with what we Elders have foreseen, Young Jedi), there are also performance issues,
+e.g. builtin-fetchers are only executed one by one and not in parallel with
+derivations. This is what the issues strives to fix that and more (I believe).
+That is really cool!&lt;&#x2F;p&gt;
+&lt;p&gt;I am not clear, though, &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;9077#issuecomment-1817861537&quot;&gt;if this would mean that the built-in fetchers would
+still be executed by the build
+client&lt;&#x2F;a&gt;, e.g.
+the user that called &lt;code&gt;nix build&lt;&#x2F;code&gt;. Let&#x27;s assume that in good faith for now,
+otherwise this would make authentication more difficult not easier. (Note from
+future Peter: This gets actually addressed in the next section!)&lt;&#x2F;p&gt;
+&lt;p&gt;So in a future world where Nix contained a built-in fetcher suitable for GitLab,
+this could mitigate some of the downsides of built-in fetchers.&lt;&#x2F;p&gt;
+&lt;p&gt;How would it work then with remote builders?&lt;&#x2F;p&gt;
+&lt;p&gt;For the first time:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;nix build&lt;&#x2F;code&gt; gets invoked.&lt;&#x2F;li&gt;
+&lt;li&gt;Fetch from GitLab running in the same process or at least environment as the
+&lt;code&gt;nix build&lt;&#x2F;code&gt; process so it has access to all user authentication.&lt;&#x2F;li&gt;
+&lt;li&gt;The result is uploaded to the builders from the local machine...&lt;&#x2F;li&gt;
+&lt;li&gt;build continues&lt;&#x2F;li&gt;
+&lt;li&gt;Someway or the other, the result of the fetch ends up in our shared Nix
+store&#x2F;substituter.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Afterwards:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;nix build&lt;&#x2F;code&gt; gets invoked.&lt;&#x2F;li&gt;
+&lt;li&gt;The result gets substituted which is also fast on remote builders.&lt;&#x2F;li&gt;
+&lt;li&gt;Build continues...&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Not too bad, but actually nearly not at all dependent on issue #9077. It mostly
+depends on supporting GitLab by having more flexible built-in fetchers.
+Potentially, I could do that with a nix plugin or patch.&lt;&#x2F;p&gt;
+&lt;p&gt;What is really cool about this solution is that the credentials never leave the
+client. Which makes it both simple and secure. But implementing that issue in a
+way that would allow executing these fetches in parallel but on the client is
+not really trivial.&lt;&#x2F;p&gt;
+&lt;p&gt;BTW, built-in fetchers have other super powers (e.g. not necessarily
+requiring an output hash but simply a git hash) and FODs have some other problems
+(e.g. &lt;a href=&quot;https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;nix-rerunning-fixed-output-derivations&#x2F;&quot;&gt;being unwantedly substituted when the URL but not the hash is
+changed&lt;&#x2F;a&gt;).&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;optional-client-side-building&quot;&gt;Optional client-side building&lt;&#x2F;h2&gt;
+&lt;p&gt;Reference: &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;9344&quot;&gt;Nix Github Issue #9344&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;ol&gt;
+&lt;li&gt;For fixed output derivations that need authentication, it is probably
+better to run them as the current user in order to give them secrets,
+especially ephemeral secrets (like expiring tokens) that might require some
+humans in the loop (various 2fa schemes) and are cumbersome to store in the
+store.&lt;&#x2F;li&gt;
+&lt;li&gt;Builtin fetching should be represented by derivations #9077 once the above
+is sorted out, we should do this too. Currently the main reason fetching is
+not done with derivations is authentication. This provides a proper
+solution. All fetching done as client-side derivations nicely meets in the
+middle of the current fixed-output derivations vs libfetchers divide.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;Huh! John addressed my previous concerns here without me even realizing. Thanks
+again!&lt;&#x2F;p&gt;
+&lt;p&gt;After this John dives directly into implementation details that are hard to
+follow for me:&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;General decoupling. Building shouldn&#x27;t depend on using the SQL database
+(and I don&#x27;t think it currently does). It ought to work with other stores that
+also provide a bike system view.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;I assume that he means &amp;quot;build system view&amp;quot; but &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;9344#issuecomment-1817868871&quot;&gt;I can&#x27;t follow the relationship to
+the SQLite database&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h2&gt;
+&lt;p&gt;It was interesting to learn about the different proposals. Some of them would be
+awesome improvements, the last one would nearly solve my problem.&lt;&#x2F;p&gt;
+&lt;p&gt;Short term I see the following possibilities for allowing private fetches from
+GitLab:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Patching nix or writing a plugin so that I can use a more flexible &lt;a href=&quot;https:&#x2F;&#x2F;nixos.org&#x2F;manual&#x2F;nix&#x2F;stable&#x2F;language&#x2F;builtins.html#builtins-fetchurl&quot;&gt;fetchurl
+built-in&lt;&#x2F;a&gt;
+that supports setting headers from environment variables. That would allow me
+to pass credentials without somehow having them end up in the store.&lt;&#x2F;li&gt;
+&lt;li&gt;Using a custom FOD to fetch from GitLab and have a mechanism to pass the
+GitLab API token to the builder.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;The second one could be easily achieved by similar means as described
+&lt;a href=&quot;https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;2023-nix-s3-store-authentication&#x2F;&quot;&gt;here&lt;&#x2F;a&gt;: E.g.
+allowing trusted clients to change allowlisted environment variables in the
+builder. Since that is not possible yet and requires further discussion, I
+implemented a hacky way to do that in our internal PoC. I might write a separate
+blog post about that!&lt;&#x2F;p&gt;
+&lt;p&gt;If you want to know more about my current journey and context, check out &lt;a href=&quot;https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;2023-nix-for-private-binaries&#x2F;&quot;&gt;Nix:
+Distributing private&#x2F;public
+binaries&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;Noticed a mistake? Want to discuss something with me? Feel free to
+&lt;a href=&quot;https:&#x2F;&#x2F;discourse.nixos.org&#x2F;t&#x2F;nix-authenticated-fetches-from-gitlab-reading-about-related-work&#x2F;35708.&quot;&gt;discuss&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Alos, feel free to get in touch with me with the information shared on &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&quot;&gt;my
+GitHub profile kolloch&lt;&#x2F;a&gt; or &lt;a href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;pkolloch&quot;&gt;Twitter
+@pkolloch&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+</description>
+      </item>
+      <item>
+          <title>Nix in the Enterprise: AWS S3 Store Authentication</title>
+          <pubDate>Sun, 12 Nov 2023 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/2023-nix-s3-store-authentication/</link>
+          <guid>https://blog.eigenvalue.net/2023-nix-s3-store-authentication/</guid>
+          <description>&lt;p&gt;Private stores? Temporary credentials? At the time of
+writing this, definitely not easy! (Please, please prove me wrong!)&lt;&#x2F;p&gt;
+&lt;p&gt;At the end of this article I&#x27;ll make a pragmatic proposal that should be quite
+easy to implement and improve the user experience significantly.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;stores-what-s-possible-today&quot;&gt;Stores: What&#x27;s possible today?&lt;&#x2F;h2&gt;
+&lt;p&gt;&amp;quot;Stores&amp;quot; store build results and allow you &lt;a href=&quot;https:&#x2F;&#x2F;nixos.org&#x2F;manual&#x2F;nix&#x2F;stable&#x2F;package-management&#x2F;sharing-packages&quot;&gt;to share them between
+machines&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;You can copy packages (store paths) with their transitive dependencies (closure)
+between machines explicitly, e.g. with &lt;code&gt;nix copy&lt;&#x2F;code&gt; or &lt;code&gt;nix-copy-closure&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;You can also use them as a cache (substituter) during builds: For suitable build
+steps (derivations), Nix will check if the result has already been build and is
+available for download.&lt;&#x2F;p&gt;
+&lt;p&gt;How can we authenticate towards private stores? That depends on the store type:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;SSH. Well with the usual SSH mechanisms.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;HTTPS. You can use &lt;code&gt;.netrc&lt;&#x2F;code&gt; to provide basic auth credentials.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;AWS S3. Uses the AWS SDK&#x27;s
+&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;blob&#x2F;458e511dc41dd1726a42f001fa34222b3ab9223a&#x2F;src&#x2F;libstore&#x2F;s3-binary-cache-store.cc#L96-L109&quot;&gt;&lt;code&gt;Aws::Auth::AWSCredentialsProvider&lt;&#x2F;code&gt;&lt;&#x2F;a&gt;
+which e.g. &lt;a href=&quot;https:&#x2F;&#x2F;sdk.amazonaws.com&#x2F;cpp&#x2F;api&#x2F;LATEST&#x2F;aws-cpp-sdk-core&#x2F;html&#x2F;md_docs_2_credentials___providers.html&quot;&gt;search for credentials in environment variables and configuration
+files&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;How do you provide these credentials? It depends on the context in which the
+store is used.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;nix copy&lt;&#x2F;code&gt;: The credentials e.g. for AWS are taken from the invoking user or
+the environment in which nix runs.&lt;&#x2F;li&gt;
+&lt;li&gt;Substitution with single-user setup without daemon: Same.&lt;&#x2F;li&gt;
+&lt;li&gt;Substitution but with nix-daemon: Credentials are resolved in the environment
+of the nix-daemon or from the config files of the nix-daemon user.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;That is already super confusing. You have entered an AWS session with temporary
+credentials available in environment variables:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;nix copy&lt;&#x2F;code&gt; just works.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;nix build&lt;&#x2F;code&gt; cannot use the substituter when it uses the nix-daemon.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;cachix-state-of-the-art-for-https-stores&quot;&gt;Cachix: State of the art for HTTPS stores&lt;&#x2F;h2&gt;
+&lt;p&gt;Cachix uses a CLI to make this as convenient as possible:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;It assumes you are a trusted user that can change nix-daemon settings on the
+fly.&lt;&#x2F;li&gt;
+&lt;li&gt;It updates your &lt;code&gt;nix.conf&lt;&#x2F;code&gt; with a potential private cache and a &lt;code&gt;net-rc&lt;&#x2F;code&gt; file
+setting.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;nix copy&lt;&#x2F;code&gt; takes this config directly and works.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;nix build&lt;&#x2F;code&gt; passes this config to the nix-daemon that can hopefully also read
+your net-rc file.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Passing the config to the nix-daemon is implemented via daemon op
+&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;blob&#x2F;458e511dc41dd1726a42f001fa34222b3ab9223a&#x2F;src&#x2F;libstore&#x2F;daemon.cc#L723C26-L758C6&quot;&gt;SetOptions&lt;&#x2F;a&gt;
+which changes the &lt;code&gt;Settings&lt;&#x2F;code&gt; globally. That is fine, because the nix-daemon is
+forked for every connection.&lt;&#x2F;p&gt;
+&lt;p&gt;What are the problems?&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Need to patch your &lt;code&gt;nix-config&lt;&#x2F;code&gt;. This is potentially not that bad!&lt;&#x2F;li&gt;
+&lt;li&gt;Remote builders need additional server-side config. The config options might
+actually even be transfered with the &lt;code&gt;SetOptions&lt;&#x2F;code&gt; command, not sure, but your
+net-rc file is likely unavailable on the remote builder. Might be OK if you
+don&#x27;t use them or someone else sets them up for you!&lt;&#x2F;li&gt;
+&lt;li&gt;Does not work well with temporary credentials. Might be a showstopper in some
+environments.&lt;&#x2F;li&gt;
+&lt;li&gt;Only works for HTTP(S) with Basic Authenticationstores. Yeah, well, if you use
+something else... Doesn&#x27;t work with AWS S3...&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;aws-s3-state-of-the-art-solution&quot;&gt;AWS S3: State of the art solution&lt;&#x2F;h2&gt;
+&lt;p&gt;If you have a single user nix setup, it is rather easy. Is your user
+authenticated and authorized to access the S3 store? So is nix running as that
+user.&lt;&#x2F;p&gt;
+&lt;p&gt;It becomes more annoying if you use a nix-daemon: You also need to provide the
+credentials to the nix-daemon. If you use&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;pragmatic-user-friendly-solution&quot;&gt;Pragmatic User-Friendly Solution&lt;&#x2F;h2&gt;
+&lt;p&gt;I assume that your trust your nix-daemon or remote builder. I think that&#x27;s fair
+and the assumption behind the approach that cachix uses.&lt;&#x2F;p&gt;
+&lt;p&gt;While &lt;code&gt;netrc&lt;&#x2F;code&gt; works pretty decently for Cachix, it doesn&#x27;t match AWS well since
+it doesn&#x27;t use Basic Authentication. Remember, the complicated logic is already
+all inside of the nix-daemon via the AWS SDK, we just need to pass a couple of
+values to the nix-daemon.&lt;&#x2F;p&gt;
+&lt;p&gt;I see two major approaches:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Custom logic for AWS: Either extend &lt;code&gt;SetOptions&lt;&#x2F;code&gt; or create a new operation to
+transfer AWS credentials and store them in special-purpose fields. Modify the
+credential provider chain to also look there for credentials.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;A general way to transfer environment variables from the nix client to the
+daemon for the current session.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;h2 id=&quot;details-for-passing-environment-variables-to-the-daemon&quot;&gt;Details for passing environment variables to the daemon&lt;&#x2F;h2&gt;
+&lt;p&gt;I like the second one better because it would also solve the problem if we
+integrated solutions for other cloud providers. And it might even be an
+acceptable workaround for fetches from private sources in builds (more about
+that later).&lt;&#x2F;p&gt;
+&lt;p&gt;I&#x27;d restrict this features with some explicit config options.&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;In the nix-daemon: &lt;code&gt;allowed-env-variables-from-trusted-client&lt;&#x2F;code&gt; as a list of
+environment variables that may be set from a trusted client. E.g.:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;plain&quot; class=&quot;language-plain &quot;&gt;&lt;code class=&quot;language-plain&quot; data-lang=&quot;plain&quot;&gt;allowed-env-variables-from-trusted-client = AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;For the nix client: &lt;code&gt;pass-env-variables&lt;&#x2F;code&gt; as a list of environment variables
+that are passed whenever a connection to the nix-daemon is opened. E.g.:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;plain&quot; class=&quot;language-plain &quot;&gt;&lt;code class=&quot;language-plain&quot; data-lang=&quot;plain&quot;&gt;pass-env-variables = AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;If a client has valid AWS environment variables, this will make it just work,
+even with temporary credentials. &lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;nix copy&lt;&#x2F;code&gt; &#x2F; &lt;code&gt;nix build&lt;&#x2F;code&gt; will just both work after adding a few standard
+config options.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;The config can remain static while the credentials can change.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Yey!&lt;&#x2F;p&gt;
+&lt;p&gt;It might even work with remote builds: at least if the &lt;code&gt;SetOptions&lt;&#x2F;code&gt; op is also
+used there.&lt;&#x2F;p&gt;
+&lt;p&gt;Restrictions:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;This requires the client to have a valid AWS session whenever you might
+access the AWS S3 store. It cannot prompt for e.g. your MFA code on demand.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;If the nix-daemon implementation ever changes and does not fork on every new
+connection, then changing the global environment variables of the process is
+also a nono. Note though, that a lot of the implementation would need to
+change in that case.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h2&gt;
+&lt;p&gt;I can definitely think of other solutions here but this seems to have the right
+mix of &amp;quot;good enough&amp;quot;, &amp;quot;not too specialized&amp;quot; and &amp;quot;easy to implement.&amp;quot;&lt;&#x2F;p&gt;
+&lt;p&gt;I might be wrong, though, and would love to hear your thoughts!&lt;&#x2F;p&gt;
+&lt;p&gt;If you want to know more about my current journey and context, check out &lt;a href=&quot;https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;2023-nix-for-private-binaries&#x2F;&quot;&gt;Nix:
+Distributing private&#x2F;public
+binaries&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;Feel free to get in touch
+with me with the information shared on my GitHub profile:
+&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&quot;&gt;kolloch&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+</description>
+      </item>
+      <item>
+          <title>Nix &amp; Docker: Layer explicitly without duplicate packages!</title>
+          <pubDate>Sun, 12 Nov 2023 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/2023-nix2container-everything-once/</link>
+          <guid>https://blog.eigenvalue.net/2023-nix2container-everything-once/</guid>
+          <description>&lt;p&gt;I love &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;nlewo&#x2F;nix2container&quot;&gt;nix2container&lt;&#x2F;a&gt;! It allows you to
+build docker containers with nix, declaratively, and it even avoids writing
+large archive files to the disk.&lt;&#x2F;p&gt;
+&lt;p&gt;However, there are some pitfalls when using it. Especially, when using it as I do:
+spelling out the contents of your layers explicitly.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;straight-forward-image-with-explicit-layering&quot;&gt;Straight-forward image with explicit layering&lt;&#x2F;h2&gt;
+&lt;p&gt;Here is a container with &lt;code&gt;bash&lt;&#x2F;code&gt; and &lt;code&gt;zsh&lt;&#x2F;code&gt; included:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;{ #...
+  layered = nix2container.buildImage {
+    name = &amp;quot;layered&amp;quot;;
+    layers =
+      let layerDefs = [
+        {
+          deps = with nixpkgs; [ readline ];
+        }
+        {
+          deps = with nixpkgs; [ bashInteractive ];
+        }
+        {
+          deps = with nixpkgs; [ zsh ];
+        }
+      ];
+      in builtins.map nix2container.buildLayer layerDefs;
+    config = {
+      Env = [
+        (let path = with nixpkgs; lib.makeBinPath [ bashInteractive zsh ];
+        in &amp;quot;PATH=${path}&amp;quot;)
+      ];
+    };
+  };
+}
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;I love this! So straight-forward! Close to the on-disk format. I feel like
+having control without the fuzz.&lt;&#x2F;p&gt;
+&lt;p&gt;And it works:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;plain&quot; class=&quot;language-plain &quot;&gt;&lt;code class=&quot;language-plain&quot; data-lang=&quot;plain&quot;&gt;❯ docker run -it layered bash
+bash-5.2#
+exit
+❯ docker run -it layered zsh
+34c7a50b621e#
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;How efficient is that image? Does it contain duplicate files? Let&#x27;s ask
+&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;wagoodman&#x2F;dive&quot;&gt;dive&lt;&#x2F;a&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;plain&quot; class=&quot;language-plain &quot;&gt;&lt;code class=&quot;language-plain&quot; data-lang=&quot;plain&quot;&gt;❯ dive --ci layered
+  Using default CI config
+Image Source: docker:&amp;#x2F;&amp;#x2F;layered
+Fetching image... (this can take a while for large images)
+Analyzing image...
+  efficiency: 40.9436 %
+  wastedBytes: 142845873 bytes (143 MB)
+  userWastedPercent: 126.2491 %
+Inefficient Files:
+Count  Wasted Space  File Path
+    3         14 MB  &amp;#x2F;nix&amp;#x2F;store&amp;#x2F;c0hkzndf6i162jymxmlirn9l6ypv7p3c-glibc-2.38-23&amp;#x2F;share&amp;#x2F;i18n&amp;#x2F;locales&amp;#x2F;cns11643_stroke
+    3         10 MB  &amp;#x2F;nix&amp;#x2F;store&amp;#x2F;c0hkzndf6i162jymxmlirn9l6ypv7p3c-glibc-2.38-23&amp;#x2F;share&amp;#x2F;i18n&amp;#x2F;locales&amp;#x2F;iso14651_t1_common
+    3        6.1 MB  &amp;#x2F;nix&amp;#x2F;store&amp;#x2F;c0hkzndf6i162jymxmlirn9l6ypv7p3c-glibc-2.38-23&amp;#x2F;lib&amp;#x2F;libc.so.6
+[...]
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Oh. That is not so great. What happened here?&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;bashInteractive&lt;&#x2F;code&gt; and &lt;code&gt;zsh&lt;&#x2F;code&gt; share some dependencies. I already tried to factor
+out &lt;code&gt;readline&lt;&#x2F;code&gt; which also uses &lt;code&gt;glibc&lt;&#x2F;code&gt;. But still, &lt;code&gt;nix2container&lt;&#x2F;code&gt; repeats all
+store paths, even if present in earlier layers.&lt;&#x2F;p&gt;
+&lt;p&gt;Why is that?&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;nix2container.buildLayer&lt;&#x2F;code&gt; builds each layer independently,
+&lt;code&gt;nix2container.buildImage&lt;&#x2F;code&gt; assembles them in one image.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;deduplicating-common-dependencies-manually&quot;&gt;Deduplicating common dependencies (manually)&lt;&#x2F;h2&gt;
+&lt;p&gt;How do we make a layer aware of previous layers? We use the &lt;code&gt;layers&lt;&#x2F;code&gt; attribute
+of &lt;code&gt;buildLayer&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;{ #...
+  layeredDeduplicated = nix2container.buildImage {
+    name = &amp;quot;layered&amp;quot;;
+    layers =
+      let
+        commonLayer = {
+          deps = with nixpkgs; [ readline ];
+        };
+      layerDefs = [
+        {
+          deps = with nixpkgs; [ bashInteractive ];
+          layers = [ (nix2container.buildLayer commonLayer) ];
+        }
+        {
+          deps = with nixpkgs; [ zsh ];
+          layers = [ (nix2container.buildLayer commonLayer) ];
+        }
+      ];
+      in builtins.map nix2container.buildLayer layerDefs;
+    config = {
+      Env = [
+        (let path = with nixpkgs; lib.makeBinPath [ bashInteractive zsh ];
+        in &amp;quot;PATH=${path}&amp;quot;)
+      ];
+    };
+  };
+}
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Let&#x27;s have a look at dive&#x27;s opinion on this:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;plain&quot; class=&quot;language-plain &quot;&gt;&lt;code class=&quot;language-plain&quot; data-lang=&quot;plain&quot;&gt;Image Source: docker:&amp;#x2F;&amp;#x2F;layered
+Fetching image... (this can take a while for large images)
+Analyzing image...
+  efficiency: 100.0000 %
+  wastedBytes: 0 bytes (0 B)
+  userWastedPercent: 0.0000 %
+Inefficient Files:
+Count  Wasted Space  File Path
+None
+Results:
+  PASS: highestUserWastedPercent
+  SKIP: highestWastedBytes: rule disabled
+  PASS: lowestEfficiency
+Result:PASS [Total:3] [Passed:2] [Failed:0] [Warn:0] [Skipped:1]
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Dive is super happy! Nice!&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;deduplication-automatic&quot;&gt;Deduplication (automatic)&lt;&#x2F;h2&gt;
+&lt;p&gt;Wouldn&#x27;t it be nice if later layers always skipped all store paths already
+contained in earlier layers?&lt;&#x2F;p&gt;
+&lt;p&gt;This being nix, this is easy to generalize:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;{ # ...
+  # Nest all layers so that prior layers are dependencies of later layers.
+  # This way, we should avoid redundant dependencies.
+  foldImageLayers = let
+    mergeToLayer = priorLayers: component:
+      assert builtins.isList priorLayers;
+      assert builtins.isAttrs component; let
+        layer = nix2container.buildLayer (component
+          &amp;#x2F;&amp;#x2F; {
+            layers = priorLayers;
+          });
+      in
+        priorLayers ++ [layer];
+  in
+    layers: lib.foldl mergeToLayer [] layers;
+}
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Each layer will reference all prior layers in the &lt;code&gt;layers&lt;&#x2F;code&gt; attribute. This might
+be problematic with a large number of layers -- but hasn&#x27;t been problematic so
+far for me. I am sure one can optimize it.&lt;&#x2F;p&gt;
+&lt;p&gt;Putting &lt;code&gt;foldImageLayers&lt;&#x2F;code&gt; to good use:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;{ # ...
+  layeredDeduplicatedAutomatic = nix2container.buildImage {
+    name = &amp;quot;layeredAutomatic&amp;quot;;
+    layers = 
+      let layerDefs = [
+        { deps = with nixpkgs; [ readline ]; }
+        { deps = with nixpkgs; [ bashInteractive ]; }
+        { deps = with nixpkgs; [ zsh ]; }
+      ];
+      in foldImageLayers layerDefs;
+    config = {
+      Env = [
+        (let path = with nixpkgs; lib.makeBinPath [ bashInteractive zsh ];
+        in &amp;quot;PATH=${path}&amp;quot;)
+      ];
+    };
+  };
+}
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This results again in a docker image without any redundant store paths! Dive is
+happy and so are we: We explicitly define the contents of each layer but
+automatically exclude all duplicate store paths!&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;the-end&quot;&gt;The end&lt;&#x2F;h2&gt;
+&lt;p&gt;Note that &lt;code&gt;nix2container&lt;&#x2F;code&gt; supports layering your dependencies automatically
+using the algorithm described
+&lt;a href=&quot;https:&#x2F;&#x2F;grahamc.com&#x2F;blog&#x2F;nix-and-layered-docker-images&#x2F;&quot;&gt;here&lt;&#x2F;a&gt;. Check out the
+&lt;code&gt;maxLayers&lt;&#x2F;code&gt; setting.&lt;&#x2F;p&gt;
+&lt;p&gt;I like to have more control but maybe fully automatic is the best? I&#x27;m curious
+to hear your thoughts on the automatic vs. manual control in Docker container
+optimization. What has been your approach?&lt;&#x2F;p&gt;
+&lt;p&gt;Feel free to get in touch with me with the information shared on my GitHub
+profile: &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&quot;&gt;kolloch&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;references&quot;&gt;References&lt;&#x2F;h2&gt;
+&lt;p&gt;I am for sure not the first one that stumbled upon this. Initially, the
+discussion issue &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;nlewo&#x2F;nix2container&#x2F;issues&#x2F;41&quot;&gt;#41&lt;&#x2F;a&gt; of
+nix2container pointed me into the right direction!&lt;&#x2F;p&gt;
+</description>
+      </item>
+      <item>
+          <title>Nix: Distributing private&#x2F;public binaries</title>
+          <pubDate>Sat, 04 Nov 2023 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/2023-nix-for-private-binaries/</link>
+          <guid>https://blog.eigenvalue.net/2023-nix-for-private-binaries/</guid>
+          <description>&lt;p&gt;Getting proprietary binaries, scripts to your co-workers is so hard! And that is
+a shame because CLIs are awesome:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Composable. It is very easy to write a little wrapper around another CLI that
+adds some functionality.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Easy to write. Much easier than a web app.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;...&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;I should write another article on that!&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;the-problem&quot;&gt;The problem&lt;&#x2F;h2&gt;
+&lt;p&gt;You say: &amp;quot;How hard is it really? Can&#x27;t you do a release on GitLab&#x2F;GitHub and
+provide some download links? They are already protected by private
+authentication.&amp;quot;&lt;&#x2F;p&gt;
+&lt;p&gt;Yeah, sure. But there are some problems:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Version consistency. Everyone &lt;em&gt;might&lt;&#x2F;em&gt; download the binaries they need on
+demand resulting in a unique versioning footprint on every dev machine. Or are
+you naive enough that your developers update their kubectl version with plugins
+and third-party tools relying on it when you announce a new Kubernetes upgrade?
+There are more fun ways to spend your time than asking again and again: Have
+you upgraded CLI X yet?&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Packaging different language runtimes. Yeah, your Go or Rust binary might be
+somewhat easy to distribute. What about a Python script? A TypeScript CLI? So
+you need to package the runtime environment for your script as well. But not
+interfere with the local development setup.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;the-solution&quot;&gt;The solution?&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;strong&gt;nix &amp;amp; the nixpkgs&lt;&#x2F;strong&gt;* collection.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;nixos.org&quot;&gt;Nix&lt;&#x2F;a&gt; is many things but it is also &lt;strong&gt;a package manager that
+works on Linux&#x2F;Mac OS&lt;&#x2F;strong&gt;. It does NOT support Windows directly but my coworkers
+are fine with working in a WSL2 shell.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Awesome &lt;code&gt;direnv&lt;&#x2F;code&gt; integration: Imagine the right set of tools automatically
+available to you if you enter a project directory! And that also sets up commit
+hooks etc for you. That is &lt;code&gt;direnv&lt;&#x2F;code&gt; + &lt;code&gt;nix&lt;&#x2F;code&gt;. Have a look at
+&lt;a href=&quot;https:&#x2F;&#x2F;devenv.sh&#x2F;&quot;&gt;devenv&lt;&#x2F;a&gt; if you want to play around with it quickly!&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;nixpkgs&lt;&#x2F;code&gt; collection: &lt;a href=&quot;https:&#x2F;&#x2F;search.nixos.org&#x2F;packages&quot;&gt;A vast collection of prepackaged
+software&lt;&#x2F;a&gt;, your favorite programming
+language tooling is most likely among them.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Flake ecosystem: Flakes are a simple way to package nix libraries and binaries
+outside of the main &lt;code&gt;nixpkgs&lt;&#x2F;code&gt; collection.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Very flexible packaging options:&lt;&#x2F;p&gt;
+&lt;pre&gt;&lt;code&gt;- Already have some binaries? Great! You can integrate them into your
+  package bundle by supplying a download URL and a hash for all of them.
+
+- Bundle up your Python script with a runtime environment? Quite easy.
+
+- ...
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Works alongside other package managers! Your users can keep using home brew or
+their native package managers for their personal preferences. Nix will not
+overwrite the global Python installation just because your script needs it.
+Even if you make tools available via direnv for a project, they are only in
+your path when you are in the project folder!&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;ecosystem&quot;&gt;Ecosystem&lt;&#x2F;h2&gt;
+&lt;p&gt;The Nix ecosystem is thriving. E.g. look at the commits in the
+&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nixpkgs&quot;&gt;nixpkgs&lt;&#x2F;a&gt; repository to have a glimpse at the
+vibrant open source community! There are also &lt;a href=&quot;https:&#x2F;&#x2F;nixos.org&#x2F;community&#x2F;&quot;&gt;multiple popular communication
+channels&lt;&#x2F;a&gt; where you can get help and discuss your
+ideas.&lt;&#x2F;p&gt;
+&lt;p&gt;But the ecosystem definitely also profits from contributions of various
+companies including Big Tech and companies fairly specialized on Nix or builds.&lt;&#x2F;p&gt;
+&lt;p&gt;Need commercial support? You are covered.&lt;&#x2F;p&gt;
+&lt;p&gt;There are several companies that bet on using Nix as a basis for dev tooling so
+I am sure that package support will even get better.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;the-rough-edges-of-nix-itself&quot;&gt;The rough edges of nix itself&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;em&gt;Flake&#x27;s status&lt;&#x2F;em&gt;*: You remember Flakes that I mentioned above? Well, technically,
+this is an experimental feature. They have been around for years, whole
+ecosystems have been built around it, but officially, they might still change in
+incompatible ways!&lt;&#x2F;p&gt;
+&lt;p&gt;I am obviously not the only one that has noticed this as a big problem and the
+consensus is that while not officially stable, they have such wide-spread use
+that keeping them working is a big priority nevertheless.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;em&gt;Simple but exotic language&lt;&#x2F;em&gt;: The Nix ecosystem is built around the nix
+programming language. That is a simple and mostly well-designed language but it
+is not mainstream. The combination of being dynamically typed and lazy-evaluated
+by default makes debugging sometimes quite cumbersome.&lt;&#x2F;p&gt;
+&lt;p&gt;Nix allows some amazing freedom but it can be hard to orient at times: E.g. Nix
+doesn&#x27;t impose much structure on your code and you need to rely on best
+practices on which there are diverse opinions.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;using-nix-in-the-enterprise&quot;&gt;Using nix in the enterprise&lt;&#x2F;h2&gt;
+&lt;p&gt;In my company, I have just started the journey and only completed the first
+steps. Here is an outline of what I did and am about to do. Feel free to chime
+in and suggest better paths for me!&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;streamline-the-nix-installation-experience&quot;&gt;Streamline the nix installation experience&lt;&#x2F;h3&gt;
+&lt;p&gt;What do I want?&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Simple installation instructions with as few steps as possible.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Should work for developers who already set up some things and for people that
+have just started in the company.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;If you run it again, it should simply update everything to the latest software
+version and config version.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Therefore, I created
+&lt;a href=&quot;https:&#x2F;&#x2F;gitlab.com&#x2F;nexxiot-labs&#x2F;nix-bootstrap&quot;&gt;nix-bootstrap&lt;&#x2F;a&gt; that takes care
+of:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Installing nix with
+&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;DeterminateSystems&#x2F;nix-installer&quot;&gt;nix-installer&lt;&#x2F;a&gt;. I love
+Determinate System&#x27;s mission to get rid of annoying papercuts like e.g. broken
+installs after Mac OS upgrades.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Deterministic versions of &lt;code&gt;nix-installer&lt;&#x2F;code&gt;, &lt;code&gt;nix&lt;&#x2F;code&gt;, and
+&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;maralorn&#x2F;nix-output-monitor&quot;&gt;&lt;code&gt;nom&lt;&#x2F;code&gt;&lt;&#x2F;a&gt;. Rather than just
+always installing the latest ones.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Working shell completions for &lt;code&gt;nix&lt;&#x2F;code&gt; commands and other software installed in
+the user profile. &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;DeterminateSystems&#x2F;nix-installer&quot;&gt;This will hopefully be
+fixed&lt;&#x2F;a&gt; in the installer
+script of nix that nix-installer also uses. Meanwhile I included a fix in
+&lt;code&gt;nix-bootstrap&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Installing &lt;code&gt;direnv&lt;&#x2F;code&gt;. &lt;code&gt;direnv&lt;&#x2F;code&gt; is unfortunately &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;DeterminateSystems&#x2F;nix-installer&#x2F;issues&#x2F;703#issuecomment-1791262857&quot;&gt;out of scope for
+nix-installer&lt;&#x2F;a&gt;,
+so I also install it as part of the bootstrap nix profile that I install
+system-wide and for the installing user.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Setting up credentials for private GitLab repositories.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;All triggered with a simple shell command:&lt;&#x2F;p&gt;
+&lt;pre&gt;&lt;code&gt;bash -c &amp;quot;$(curl https:&amp;#x2F;&amp;#x2F;nexxiot-labs.gitlab.io&amp;#x2F;nix-bootstrap&amp;#x2F;install.sh)&amp;quot;
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;I am happy to collaborate with others on improving this or upstreaming fixes to
+nix&#x2F;nix-installer.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;ci-support-for-nix-in-gitlab&quot;&gt;CI support for nix in GitLab&lt;&#x2F;h3&gt;
+&lt;p&gt;Generally, the main nix projects are all on GitHub and, therefore, GitHub is
+better supported by the ecosystem. That said, using GitLab CI with nix is not
+super difficult.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Creating a CI container. Nicely minimal but still everything that is needed.
+E.g. GitLab CI expects a &lt;code&gt;grep&lt;&#x2F;code&gt; before I even get a chance to execute a &lt;code&gt;nix&lt;&#x2F;code&gt;
+command to install it. &lt;code&gt;nixpkgs&#x2F;nix-flakes&lt;&#x2F;code&gt; is nicely minimal and does not
+include it. I used the new cool kid on the block &lt;code&gt;nix2container&lt;&#x2F;code&gt; but it has &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;nlewo&#x2F;nix2container&#x2F;issues&#x2F;94&quot;&gt;a
+problem that gets only triggered if you build the container itself within that
+container.&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Allowing CI access to a nix substituter (= cache). Allowing read&#x2F;write access
+to an S3 bucket was easy in our setup but it is much harder to share that
+access with users -- see below.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Allowing nix in GitLab CI to fetch binary artifacts from other private repos.
+Absolutely not straight-forward to inject the right credentials into the fetch
+build step, especially since &lt;a href=&quot;https:&#x2F;&#x2F;gitlab.com&#x2F;gitlab-org&#x2F;gitlab&#x2F;-&#x2F;issues&#x2F;341157&quot;&gt;GitLab does not support Basic Auth in its
+API&lt;&#x2F;a&gt;. Please say I am
+wrong and there is an easy way!&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Mac OS binaries. At least for our internal CLI tools, we&#x27;d want Mac OS support
+but we don&#x27;t have CI runners for Mac OS and cross-compiling is tricky and
+maybe not even reliably possible. Maybe I&#x27;ll just test &amp;amp; push them manually
+into the cache on releases.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;local-install-support&quot;&gt;Local install support&lt;&#x2F;h3&gt;
+&lt;p&gt;If users install an unchanged flake, read-access to a binary cache (=substituter
+in nix lingo) should be sufficient. If that is prefilled by CI and&#x2F;or manual
+steps as needed -- all cache requests should be hits.&lt;&#x2F;p&gt;
+&lt;p&gt;Unfortunately, we only allow temporary AWS session credentials for our users.
+Passing &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;5723&quot;&gt;those to the nix-daemon is
+not really possible&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;Using &lt;a href=&quot;https:&#x2F;&#x2F;www.cachix.org&#x2F;&quot;&gt;Cachix&lt;&#x2F;a&gt; instead would be a serious contender
+with fair prices. Unfortunately, that would require additional onboarding &#x2F;
+offboarding steps for both our IT and the developers itself. Maybe that can be
+solved with SSO support in the future!&lt;&#x2F;p&gt;
+&lt;p&gt;What is more, all systems we interact with, need to be approved by our Internal
+IT reviews. For AWS S3, since we are already using it, this is not necessary.&lt;&#x2F;p&gt;
+&lt;p&gt;So here I am still wondering what the best path forward is!&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;local-build-support&quot;&gt;Local build support&lt;&#x2F;h3&gt;
+&lt;p&gt;Obviously, local builds should also work when working on internal tool release.
+So we need to solve the authentication problem to the GitLab API (for fetching
+binary artifacts) not only in CI but also for every developer.&lt;&#x2F;p&gt;
+&lt;p&gt;Maybe I can build sort of a &amp;quot;doctor&amp;quot; script that takes care of ensuring that all
+necessary secrets are set up and that the nix-daemon can access them?&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;devcontainer-gitpod-support&quot;&gt;DevContainer&#x2F;GitPod support&lt;&#x2F;h3&gt;
+&lt;p&gt;What about allowing our developers to dabble with nix tools without even
+installing nix on their computer?&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;code.visualstudio.com&#x2F;docs&#x2F;devcontainers&#x2F;containers&quot;&gt;Devcontainer
+support&lt;&#x2F;a&gt; in Visual
+Code is quite awesome. A lot of our developers use Intellij -- WSL2 remote
+support seems to be better than devcontainer support in my testing, so probably
+not helpful for those users.&lt;&#x2F;p&gt;
+&lt;p&gt;Complementarily, &lt;a href=&quot;https:&#x2F;&#x2F;www.gitpod.io&#x2F;&quot;&gt;GitPod&lt;&#x2F;a&gt; would be a super nice test bed that
+could be easily used from our GitLab repositories.&lt;&#x2F;p&gt;
+&lt;p&gt;Authentication within a devcontainer hopefully just works similarly to doing it
+locally outside of the container -- with the right volume mounts. But it might
+be also a big pain!&lt;&#x2F;p&gt;
+&lt;p&gt;For GitPod, it is likely a completely different flow.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;cache-pruning&quot;&gt;Cache Pruning&lt;&#x2F;h3&gt;
+&lt;p&gt;Just expiring files after 30 days or so doesn&#x27;t work with nix since it breaks
+some invariants: All dependencies of a derivation are also assumed to be
+available via the cache (I think).&lt;&#x2F;p&gt;
+&lt;p&gt;Therefore, implementing a nice expiry policy is more involved. E.g. maintaining
+a list of store paths that are still relevant for recent builds and pruning
+everything else.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;a-journey&quot;&gt;A journey...&lt;&#x2F;h2&gt;
+&lt;p&gt;Puuuh... That is quite a journey ahead of me! I believe it can unlock a lot of
+productivity by easy tool distribution in my company but it doesn&#x27;t look that
+easy!&lt;&#x2F;p&gt;
+&lt;p&gt;Thanks for reading until here.&lt;&#x2F;p&gt;
+&lt;p&gt;I am thankful for any pointers to make this smoother. Feel free to get in touch
+with me with the information shared on my GitHub profile:
+&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&quot;&gt;kolloch&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+</description>
+      </item>
+      <item>
+          <title>Git: Using SSH Locally, But HTTPS in CI</title>
+          <pubDate>Tue, 01 Aug 2023 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/git-ssh-insteadof-https/</link>
+          <guid>https://blog.eigenvalue.net/git-ssh-insteadof-https/</guid>
+          <description>&lt;p&gt;In my workflow with &lt;a href=&quot;https:&#x2F;&#x2F;git-scm.com&#x2F;&quot;&gt;Git&lt;&#x2F;a&gt;, I prefer using SSH
+authentication for platforms like &lt;a href=&quot;https:&#x2F;&#x2F;github.com&quot;&gt;GitHub&lt;&#x2F;a&gt; and
+&lt;a href=&quot;https:&#x2F;&#x2F;gitlab.com&quot;&gt;GitLab&lt;&#x2F;a&gt;. It allows me to avoid saving multiple credentials
+on my machine; instead, I simply register my already existing public SSH key in
+my account settings. It seems like a clear victory, right?&lt;&#x2F;p&gt;
+&lt;p&gt;Unfortunately, it&#x27;s not a one-size-fits-all solution:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Recently, I encountered an issue that could be easily resolved using Git
+submodules in GitLab CI. GitLab has the ability to automatically check out
+submodules, albeit only if they are referenced using their HTTPS URLs.&lt;&#x2F;li&gt;
+&lt;li&gt;The convenience of copying and pasting HTTPS URLs of GitLab&#x2F;GitHub
+repositories directly into your &lt;code&gt;git clone&lt;&#x2F;code&gt; command is undeniable. I&#x27;ve been
+guilty of lazily using these HTTPS URLs when I assumed I&#x27;d only need read-only
+access, only to later realize that I had to switch them over to SSH URLs...&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;However, to my surprise, I discovered the following configuration options in
+Git. You can actually substitute the visible URLs of remote repositories based
+on their prefixes! This means that you can use SSH for local development and
+HTTPS for CI environments without having to manually switch back and forth.&lt;&#x2F;p&gt;
+&lt;p&gt;Here&#x27;s how to do it:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;toml&quot; class=&quot;language-toml &quot;&gt;&lt;code class=&quot;language-toml&quot; data-lang=&quot;toml&quot;&gt;[url &amp;quot;ssh:&amp;#x2F;&amp;#x2F;git@github.com&amp;#x2F;&amp;quot;]
+    insteadOf = https:&amp;#x2F;&amp;#x2F;github.com&amp;#x2F;
+[url &amp;quot;ssh:&amp;#x2F;&amp;#x2F;git@gitlab.com&amp;#x2F;&amp;quot;]
+    insteadOf = https:&amp;#x2F;&amp;#x2F;gitlab.com&amp;#x2F;
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This config ensures that every time you try to interact with a remote URL that
+starts with &lt;code&gt;https:&#x2F;&#x2F;github.com&#x2F;&lt;&#x2F;code&gt; or &lt;code&gt;https:&#x2F;&#x2F;gitlab.com&#x2F;&lt;&#x2F;code&gt;, Git will substitute
+it with the corresponding SSH URL. This means you can continue using HTTPS URLs
+in your &lt;code&gt;.gitmodules&lt;&#x2F;code&gt; file, but when you clone or pull locally, it will use SSH.
+It also works for &lt;code&gt;git clone&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;I have no idea how I missed this feature before, but it&#x27;s certainly a quality of
+life improvement.&lt;&#x2F;p&gt;
+</description>
+      </item>
+      <item>
+          <title>ffmpeg: Capture &amp; encode a 4K stream in realtime using VAAPI</title>
+          <pubDate>Wed, 27 May 2020 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/ffmpeg-elgato-camlink-4k/</link>
+          <guid>https://blog.eigenvalue.net/ffmpeg-elgato-camlink-4k/</guid>
+          <description>&lt;p&gt;I am a wonnabe hobbiest filmmaker. Often, I only noticed problems with the raw
+footage on my Desktop computer at home - long after I could correct them by a
+simple retake. Wouldn&#x27;t it be awesome to record your footage directly to your
+laptop? Make the footage available to others in your team really quickly, maybe
+by storing it on a server?&lt;&#x2F;p&gt;
+&lt;p&gt;I want to do this on my XPS 13 since that is my most portable option. I should
+note that my laptop is decent (Intel i7-8550U 1.8 GHz) but doesn&#x27;t have a
+discrete graphics card. In fact, I cannot even play back the 4K footage recorded
+on my Fuji XT-3 with HEVC (h265) on my laptop without tweaking VLC. And even on
+my hefty AMD Ryzen Threadripper 2950X 16-Core, I cannot encode on the CPU alone
+in realtime.&lt;&#x2F;p&gt;
+&lt;p&gt;Therefore, encoding in realtime should probably be impossible. Or not? I had to
+try. Oh, and on Linux. &lt;a href=&quot;https:&#x2F;&#x2F;nixos.org&quot;&gt;NixOS&lt;&#x2F;a&gt; to be specific.&lt;&#x2F;p&gt;
+&lt;p&gt;Note that this article is not full of deep insights but mostly contains things I
+tried and then eventually worked. This kind of content has helped me
+tremendously in the past, so let&#x27;s dump it into the Interwebs.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;the-easy-way-obs&quot;&gt;The easy way: OBS&lt;&#x2F;h2&gt;
+&lt;p&gt;The first thing that I tried was OBS studio. Here is what somewhat worked for me:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;I set the output of my camera to 4K, 16:9, 25 fps (full HD does not work)&lt;&#x2F;li&gt;
+&lt;li&gt;I added a &lt;code&gt;Video Capture (V4L2)&lt;&#x2F;code&gt; source. I needed to set the video format to
+&lt;code&gt;YV12&lt;&#x2F;code&gt; which is apparently an alias for &lt;code&gt;NV12&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;li&gt;I added a &lt;code&gt;Audio Input Capture (Pulse Audio)&lt;&#x2F;code&gt; since the video source does not
+include the audio.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;It somewhat worked. But it randomly stopped working. It dropped frames -- that
+got better when I disabled the preview. Anyways, if you reading this some time
+after I published this, give it a try, it might be the simplest option!&lt;&#x2F;p&gt;
+&lt;p&gt;Therefore, I decided to use CLI tools to
+understand what was going on and to ultimately have more control. I dabbled a
+bit with &lt;code&gt;gstreamer&lt;&#x2F;code&gt; but ultimately chose &lt;code&gt;ffmpeg&lt;&#x2F;code&gt; because I found more and
+better documentation for it and it seemed to work better.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;digging-deeper-required-software&quot;&gt;Digging deeper: Required Software&lt;&#x2F;h2&gt;
+&lt;p&gt;If you want to follow along, I installed these packages in NixOS by adding them
+to my package list:&lt;&#x2F;p&gt;
+&lt;pre&gt;&lt;code&gt;# Capturing and encoding
+ffmpeg-full # My version was 4.2.2
+
+# Inspect video devices etc.
+v4l-utils
+usbutils
+
+# Hardware acceleration for encoding&amp;#x2F;decoding
+vaapiIntel
+libva
+libva-utils
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;underlying-video-device&quot;&gt;Underlying video device&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;code&gt;ffmpeg&lt;&#x2F;code&gt; and other CLI tools require us to specify the video device name -- at
+least if you have multiple video inputs e.g. the built-in webcam and the Elgato
+Camlink 4K. You can either use the &lt;code&gt;&#x2F;dev&#x2F;videoX&lt;&#x2F;code&gt; device name that you saw in OBS
+Studio or find the device names with:&lt;&#x2F;p&gt;
+&lt;pre&gt;&lt;code&gt;v4l2-ctl --list-devices
+Cam Link 4K: Cam Link 4K (usb-0000:39:00.0-1.2):
+	&amp;#x2F;dev&amp;#x2F;video1
+	&amp;#x2F;dev&amp;#x2F;video2
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;You can already use the device names (the first one for the Cam Link) that you
+found here. The trouble is that these device names might depend on the order in
+which the video devices are detected. To get a stable device name that works
+across reboots in you shell scripts, you can look into &lt;code&gt;&#x2F;dev&#x2F;v4l&#x2F;by-id&lt;&#x2F;code&gt;
+directory to find a good stable device name. For my devicem it was
+&lt;code&gt;&#x2F;dev&#x2F;v4l&#x2F;by-id&#x2F;usb-Elgato_Cam_Link_4K_0004550EAA000-video-index0&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;We&#x27;ll refer to whatever device you have chosen with &lt;code&gt;V4L_DEVICE&lt;&#x2F;code&gt; later in the
+text.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;playing-the-video-feed&quot;&gt;Playing the video feed&lt;&#x2F;h2&gt;
+&lt;p&gt;To check whether ffmpeg can play the stream, you can use:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;ffplay -f v4l2 -i $V4L_DEVICE&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;That is super simple, isn&#x27;t it? It even detects the video format correctly. If
+it doesn&#x27;t for you, try specifying one with &lt;code&gt;-input_format&lt;&#x2F;code&gt;, e.g. &lt;code&gt;-input_format nv12&lt;&#x2F;code&gt; before the &lt;code&gt;-i&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;capture-the-video-feed&quot;&gt;Capture the video feed&lt;&#x2F;h2&gt;
+&lt;p&gt;What does &lt;code&gt;ffmpeg&lt;&#x2F;code&gt; do by default? Let&#x27;s see by exchanging &lt;code&gt;ffplay&lt;&#x2F;code&gt; with &lt;code&gt;ffmpeg&lt;&#x2F;code&gt;
+and specifying an output file:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;ffmpeg -f v4l2 -i $V4L_DEVICE capture.mkv&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Hey, that works! But only barely. &lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;I cannot encode the video in real time and the video is buffered. The raw
+video feed with 29.97 fps clocks in at about 3Gb&#x2F;s, a bit less for 25 fps. If
+we can&#x27;t keep up, ffmpeg buffers the rest in main memory. So only suitable for
+quite short videos ;)&lt;&#x2F;li&gt;
+&lt;li&gt;Also, the output is ugly, we need to specify something nicer.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;hardware-encoding-to-the-rescue&quot;&gt;Hardware-encoding to the rescue&lt;&#x2F;h2&gt;
+&lt;p&gt;Since my laptop does not have a discrete graphics card, I am using the &amp;quot;VAAPI&amp;quot;
+standard which is supported by newer Intel CPUs.&lt;&#x2F;p&gt;
+&lt;pre&gt;&lt;code&gt;ffmpeg -vaapi_device &amp;#x2F;dev&amp;#x2F;dri&amp;#x2F;renderD128 \
+  -f v4l2 -input_format nv12 -i $V4L_DEVICE \
+  -vf &amp;#x27;hwupload&amp;#x27; \
+  -c:v hevc_vaapi -b:v 100M -maxrate:v 120M capture.mkv
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Woooh! That&#x27;s a lot to understand.&lt;&#x2F;p&gt;
+&lt;p&gt;Let&#x27;s start with the basics: A basic ffmpeg command consists of a some global
+flags (&lt;code&gt;-vaapi_device &#x2F;dev&#x2F;dri&#x2F;renderD128&lt;&#x2F;code&gt; in this case) list of inputs (&lt;code&gt;-i ...&lt;&#x2F;code&gt;) and a list of outputs (e.g. file names). Local options effect the next
+input or output, so decoding options are specified before an input, encoding
+options for the output are specified before the output file name. &lt;code&gt;-f v4l2 -input_format nv12&lt;&#x2F;code&gt; apply to the input. &lt;code&gt;-c:v hevc_vaapi -b:v 100M -maxrate:v 120M&lt;&#x2F;code&gt; all apply to the output &lt;code&gt;capture.mkv&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;Between our input and the output, there is a &lt;code&gt;-vf&lt;&#x2F;code&gt; video filter command which
+can be used to process the raw video. You could scale the video, transform the
+color space, things like that. In our case, we need to make the video stream
+available in the hardware encoder with &lt;code&gt;hwupload&lt;&#x2F;code&gt;. That seems to a bit of a
+specialty with the VAAPI support. In my short experimentation with the NVIDIA
+support (&lt;code&gt;nvenc&lt;&#x2F;code&gt;) on another machine, I didn&#x27;t need something similar.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;-c:v hevc_vaapi&lt;&#x2F;code&gt; is used to choose the video codec (&lt;code&gt;-c&lt;&#x2F;code&gt; is for codec, &lt;code&gt;:v&lt;&#x2F;code&gt; is
+for video) from a long list of supported once. The codecs that use VAAPI have
+a &lt;code&gt;_vaapi&lt;&#x2F;code&gt; suffix by convention.&lt;&#x2F;p&gt;
+&lt;p&gt;Without specifying the wanted and maximum bit rate, I got a stream with low
+quality. Therefore, I specified &lt;code&gt;-b:v 100M -maxrate:v 120M&lt;&#x2F;code&gt; to aim at quite high
+quality. The highest quality setting on the X-T3 for 4K 25fps is 400Mbs, so it
+might be even worth to experiment with higher settings. Note that there is a
+&lt;a href=&quot;https:&#x2F;&#x2F;trac.ffmpeg.org&#x2F;ticket&#x2F;7629&quot;&gt;bug&lt;&#x2F;a&gt; that requires you to specify a
+maxrate that is not much higher than the wanted bit rate.&lt;&#x2F;p&gt;
+&lt;p&gt;Using VAAPI, I could encode 25 fps in realtime. Unfortunately, 29.97 is already
+too much. That unfortunately also means that my plan to encode a smaller,
+low-quality stream at the same time, also failed.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;trac.ffmpeg.org&#x2F;wiki&#x2F;Hardware&#x2F;VAAPI&quot;&gt;The FFMPEG VAAPI Wiki
+Page&lt;&#x2F;a&gt; gives context and many useful
+examples if you want to know more.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;audio-source&quot;&gt;Audio source&lt;&#x2F;h2&gt;
+&lt;p&gt;The audio feed is - unfortunately - separate from the video feed.&lt;&#x2F;p&gt;
+&lt;p&gt;First, let me save you a day of fiddling. Don&#x27;t use ALSA directly, use
+PulseAudio directly if you use it on your system. Using ALSA directly from
+ffmpeg resulted in clapping a lot to debug audio sync issues and thus driving my
+girl-friend insane.&lt;&#x2F;p&gt;
+&lt;p&gt;Use &lt;code&gt;pactl list sources&lt;&#x2F;code&gt; to output tons of information about your audio sources.&lt;&#x2F;p&gt;
+&lt;p&gt;Choose the right device and pick the name. For me, it was
+&lt;code&gt;alsa_input.usb-Elgato_Systems_Cam_Link-03.iec958-stereo&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;capture-the-audio-feed&quot;&gt;Capture the audio feed&lt;&#x2F;h2&gt;
+&lt;p&gt;This is straight-forward, we just have to specify that we want to use PulseAudio
+(by &lt;code&gt;-f pulse&lt;&#x2F;code&gt;) and specify the device name as input.&lt;&#x2F;p&gt;
+&lt;pre&gt;&lt;code&gt;ffmpeg -f pulse -i alsa_input.usb-Elgato_Systems_Cam_Link-03.iec958-stereo capture.mp3
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We skip compression to save some CPU when we do everything together later on:&lt;&#x2F;p&gt;
+&lt;pre&gt;&lt;code&gt;ffmpeg -f pulse -i alsa_input.usb-Elgato_Systems_Cam_Link-03.iec958-stereo \
+    -c:a copy capture.wav
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;code&gt;-c:a copy&lt;&#x2F;code&gt; set the audio codec to &lt;code&gt;copy&lt;&#x2F;code&gt; which skips any audio encoding. In
+this case, it is redundant since the output format doesn&#x27;t support any special
+codec anyways. It becomes relevant when we combine it with video.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;putting-it-together-doesn-t-work&quot;&gt;Putting it together... doesn&#x27;t work&lt;&#x2F;h2&gt;
+&lt;p&gt;This mostly combines our video&#x2F;audio examples and adds a &lt;code&gt;-thread_queue_size 2048&lt;&#x2F;code&gt; to allow some generous buffering:&lt;&#x2F;p&gt;
+&lt;pre&gt;&lt;code&gt;fmpeg -vaapi_device &amp;#x2F;dev&amp;#x2F;dri&amp;#x2F;renderD128 \
+    -i $V4L_DEVICE \
+    -thread_queue_size 2048 -f pulse -i $PULSE_DEVICE \
+    -vf &amp;#x27;format=nv12,hwupload&amp;#x27; \
+    -c:v hevc_vaapi -b:v 100M -maxrate:v 120M \
+    -acodec copy \
+    output-combined.mkv
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This should be the final section, right? I&#x27;d hope so but for me this wasn&#x27;t true
+at all.&lt;&#x2F;p&gt;
+&lt;p&gt;This might work for you. For me, it also worked once or so. Unfortunately, most
+of the time it will get stuck after two frames. After some random
+experimentation, I noticed that unplugging the device allowed me to record once,
+most of the time. I think that it is due to syncing the audio &#x2F; video stream.
+The video source seems to request key frames doesn&#x27;t get the expected data
+afterwards. Or something else.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;resetting-the-usb-device-without-unplugging&quot;&gt;Resetting the USB device without unplugging&lt;&#x2F;h2&gt;
+&lt;p&gt;That&#x27;s not nice but can we at least automate it? After some browsing, I found
+this recipe on &lt;a href=&quot;https:&#x2F;&#x2F;askubuntu.com&#x2F;a&#x2F;61165&quot;&gt;Ask Ubuntu&lt;&#x2F;a&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;sudo sh -c &amp;quot;echo 0 &amp;gt; &amp;#x2F;sys&amp;#x2F;bus&amp;#x2F;usb&amp;#x2F;devices&amp;#x2F;1-4.6&amp;#x2F;authorized&amp;quot;
+sudo sh -c &amp;quot;echo 1 &amp;gt; &amp;#x2F;sys&amp;#x2F;bus&amp;#x2F;usb&amp;#x2F;devices&amp;#x2F;1-4.6&amp;#x2F;authorized&amp;quot;
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;I created two shell scripts &lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&#x2F;elgato_capture&#x2F;blob&#x2F;d5a023d68c7b25727277b8b15e71e19492cbe545&#x2F;find-elgato4k-sys-dir.sh&quot;&gt;find-elgato4k-sys-dir.sh&lt;&#x2F;a&gt;
+to find the right sys directory and &lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&#x2F;elgato_capture&#x2F;blob&#x2F;d5a023d68c7b25727277b8b15e71e19492cbe545&#x2F;reset.sh&quot;&gt;reset.sh&lt;&#x2F;a&gt;
+to issue these commands and wait for the device to come up again.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h2&gt;
+&lt;p&gt;After calling &lt;code&gt;reset.sh&lt;&#x2F;code&gt;, the combined command works reliably for me. And I have
+a new found respect for the codecs in my camera.&lt;&#x2F;p&gt;
+&lt;p&gt;If you benefitted from this article or, even better, improved upon it, please
+let me know, e.g. &lt;a href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;pkolloch&quot;&gt;on Twitter&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+</description>
+      </item>
+      <item>
+          <title>Nix: Re-running fixed output derivations - at the right time</title>
+          <pubDate>Sun, 10 May 2020 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/nix-rerunning-fixed-output-derivations/</link>
+          <guid>https://blog.eigenvalue.net/nix-rerunning-fixed-output-derivations/</guid>
+          <description>&lt;p&gt;If you instantiate this derivation on your local machine, it will fail&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#1&quot;&gt;1&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt;:&lt;&#x2F;p&gt;
+&lt;pre&gt;&lt;code&gt;    nix repl ‘&amp;lt;nixpkgs&amp;gt;’
+
+    nix-repl&amp;gt; :b runCommandLocal &amp;quot;myfetch&amp;quot; {
+              	outputHash =  &amp;quot;sha256:04jnq6arig0amz0scadavbzn9bg9k4zphmrm1562n6ygfj1dnj45&amp;quot;;
+          	} &amp;#x27;&amp;#x27;Garbage. This should be a script executable by bash calling curl. It isn’t.&amp;#x27;&amp;#x27;
+        &amp;#x2F;build&amp;#x2F;.attr-0: line 1: Garbage.: command not found
+    [0 built (1 failed)]
+    error: build of &amp;#x27;&amp;#x2F;nix&amp;#x2F;store&amp;#x2F;0bn9k5s227v6mb2pvyjdh9rh1rw4l1rm-myfetch.drv&amp;#x27; failed
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Reasonably so. Yet, on my machine, Nix contently answers with an output path. Wuuuut?&lt;&#x2F;p&gt;
+&lt;p&gt;For experienced Nixers, this is not a surprise: this happens if you change a
+so-called “Fixed Output Derivation” without updating the hash.&lt;&#x2F;p&gt;
+&lt;p&gt;However, when I first made this mistake, I didn’t know whether I did something
+wrong, had a crucial misunderstanding, or Nix had a bug. I was frustrated. I
+learned that I
+&lt;a href=&quot;https:&#x2F;&#x2F;releases.nixos.org&#x2F;nix-dev&#x2F;2014-September&#x2F;014362.html&quot;&gt;am&lt;&#x2F;a&gt;
+&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;2270#issuecomment-521471329&quot;&gt;not&lt;&#x2F;a&gt;
+&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;2270#issuecomment-621541929&quot;&gt;alone&lt;&#x2F;a&gt;.
+Eventually, I understood what had happened and I could appreciate the tough
+implementation choices! Yet, there was this nagging feeling that there had to be
+a better way.&lt;&#x2F;p&gt;
+&lt;p&gt;In this article, I explore your choices as a fellow Nixer to
+verify your Fixed Output Derivations without refetching and rebuilding
+everything all the time.&lt;&#x2F;p&gt;
+&lt;p&gt;NOTE: This article is aimed at Nixers already familiar with writing derivations.
+For an introduction to Nix, see &lt;a href=&quot;https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;nix-superglue-for-immutable-infrastructure&#x2F;&quot;&gt;Nix: superglue for immutable
+infrastructure&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;fixed-output-derivations&quot;&gt;Fixed Output Derivations&lt;&#x2F;h3&gt;
+&lt;p&gt;Normally, Nix doesn’t allow derivations (= build steps) to access the
+network&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#2&quot;&gt;2&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;If you want network access from a derivation to download some sources, Nix
+requires you to set clear expectations: an output hash. A derivation with such a
+predetermined output hash is called “Fixed Output Derivation” or, abbreviated,
+“FOD”.&lt;&#x2F;p&gt;
+&lt;p&gt;This prevents you from silently introducing randomness into your build. If you
+interact with the network, you interact with the messy world beyond Nix’s
+control. But, at least, Nix can shout and abort the build, when your derivation
+does not produce the expected output.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;enter-caching-substitution&quot;&gt;Enter caching (substitution)&lt;&#x2F;h3&gt;
+&lt;p&gt;We surely do not want to re-download the Internet, again, in every build.&lt;&#x2F;p&gt;
+&lt;p&gt;Therefore, Nix will helpfully cache the result by the name of the derivation and
+the output hash.&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#3&quot;&gt;3&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; You have given Nix a promise: Trust me, whatever command I
+specify, it will result in the given hash. If Nix can ascertain the right
+result, why do all the hard work?&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;preventing-huge-rebuilds&quot;&gt;Preventing huge rebuilds&lt;&#x2F;h3&gt;
+&lt;p&gt;It goes further than that. If we want to re-execute the derivation without
+messing with our Nix store that acts like a cache, we will need to change the
+output path. If we change the output path, all the beautiful derivations and
+process that output further, will need to be rebuilt.&lt;&#x2F;p&gt;
+&lt;p&gt;Ooooh, that can be expensive. E.g. think of GNU libc. All the things we need to
+rebuild with exactly the same code that we happen to store at a different path!&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;back-to-the-problem&quot;&gt;Back to the problem&lt;&#x2F;h3&gt;
+&lt;p&gt;All this very reasonable thinking leads to the problem with which I started this
+article. The commands of the derivations are ignored if we already have a
+matching derivation result!&lt;&#x2F;p&gt;
+&lt;p&gt;In fact, Nixpkgs contains plenty of code that will typically be evaluated but
+not executed&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;because there is still a matching result in the cache. &lt;code&gt;fetchurl&lt;&#x2F;code&gt; etc. are all
+implemented with FODs (Fixed Output Derivations), so that this applies to the
+hypothetical PR in which I change something like:&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;    fetchurl {
+    	url = &amp;quot;https:&amp;#x2F;&amp;#x2F;pigeonhole.dovecot.org&amp;#x2F;releases&amp;#x2F;2.3&amp;#x2F;dovecot-2.3-pigeonhole-${version}.tar.gz&amp;quot;;
+    	sha256 = &amp;quot;0pk0579ifl3ymfzn505396bsjlg29ykwr7ag8prcbafayg4rrj28&amp;quot;;
+     }
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;To this:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;    fetchurl {
+    	url = &amp;quot;https:&amp;#x2F;&amp;#x2F;there.was.never.anything&amp;#x2F;here&amp;quot;;
+    	sha256 = &amp;quot;0pk0579ifl3ymfzn505396bsjlg29ykwr7ag8prcbafayg4rrj28&amp;quot;;
+     }
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;And most likely, the CI job would rubber stamp this lovely PR while a human
+would obviously object.&lt;&#x2F;p&gt;
+&lt;p&gt;Note that we can never ensure perfectly that an URL in a derivation still works
+-- it is outside of our control. But we could ensure that it worked at least
+once. A big difference, in my opinion!&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;rerunning-fods-on-all-input-changes&quot;&gt;Rerunning FODs on all input changes&lt;&#x2F;h3&gt;
+&lt;p&gt;As an experiment, let’s see what is necessary to re-execute FODs (Fixed Output
+Derivations) on any input change.&lt;&#x2F;p&gt;
+&lt;p&gt;FODs are rebuilt when their output hash or their name changes. Therefore, if we
+include a hash over all inputs in the name, we rebuild the FOD on every input
+change. We do this in four simple steps:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;To get Nix to calculate that hash conveniently for us, we “unfix” the given
+FOD and create a normal derivation based on it:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;let unfixedDerivation =
+    fixedOutputDerivation.overrideAttrs(attrs: {
+        outputHash = null;
+        outputHashAlgo = null;
+        outputHashMode = null;
+    });
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;We grab the output path with the hash:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;let outputPath = builtins.unsafeDiscardStringContext unfixedDerivation.outPath;
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We are using &lt;code&gt;unsafeDiscardStringContext&lt;&#x2F;code&gt; to make Nix allow us to use the
+string as part of our name. Despite the name, it works in pure&#x2F;strict eval
+mode and is quite harmless, yet unusual.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Extract the hash:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;let inputsHash = builtins.substring 11 32 outputPath;
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;And use it as part of the derivation name:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;let name = &amp;quot;${inputsHash}_${name}&amp;quot;;
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;You have just created a Fixed Output Derivation that will re-execute whenever
+any of its inputs changes!&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;rebalancing&quot;&gt;Rebalancing&lt;&#x2F;h3&gt;
+&lt;p&gt;For me, rebuilding FODs on every input change, would have been easier to
+understand. For small projects, it is even a reasonable approach. But for medium
+and larger projects, it is simply unacceptable: If we use this technique in
+this extreme form, we will rebuild mostly everything if&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;we update curl,&lt;&#x2F;li&gt;
+&lt;li&gt;we change the mirror list,&lt;&#x2F;li&gt;
+&lt;li&gt;any other input changes of &lt;code&gt;fetchurl&lt;&#x2F;code&gt;!&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;For medium-sized projects I’d recommend another approach:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Use only your original Fixed Output Derivation as a dependency for your real
+build.&lt;&#x2F;li&gt;
+&lt;li&gt;Then, use the instrumented Fixed Output Derivation in your continuous
+integration testing. That will rebuild all the Fixed Output Derivations
+themselves on any input change but it stops there. Nothing that depends on
+them needs to be rebuilt!&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;For huge projects like nixpkgs, further fine-tuning is desirable. For every
+change on &lt;code&gt;fetchurl&lt;&#x2F;code&gt;, you may want to execute a couple of basic tests but you
+may find it unnecessary to re-execute all fetchurls. In addition, you might want
+to execute each fetch at least once every 30 days or so, even without changes,
+so that you ensure the URLs are still meaningful. Elaborating on that
+deserves another article.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;easy-experimentation&quot;&gt;Easy Experimentation&lt;&#x2F;h3&gt;
+&lt;p&gt;I have created a
+“&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&#x2F;nur-packages&#x2F;blob&#x2F;master&#x2F;lib&#x2F;rerun-fixed.nix&quot;&gt;rerunFixed&lt;&#x2F;a&gt;”
+function which can be used like this:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;rerunOnChange {} myFixedOutputDerivation
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;By default, it will rerun the given FOD on every input change as a starting
+point. You can pre-override the attrs before they are used for the hash
+calculation:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;rerunOnChange {
+   	preOverrideAttrs = attrs: { irrelevant = null; };
+} myFixedOutputDerivation
+&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Look at the docs to see how you can tune it. And let me know &lt;a href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;pkolloch&quot;&gt;via
+Twitter&lt;&#x2F;a&gt; if you have questions or suggestions.
+Follow me if you want to see more articles like this.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h3&gt;
+&lt;p&gt;I think that it is worth-while checking that the code of your Fixed Output
+Derivations still work, occasionally. When and how often - that depends heavily
+on the context. I am curious about what you come up with!&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;thanks&quot;&gt;Thanks&lt;&#x2F;h3&gt;
+&lt;p&gt;Special thanks to Andreas Rammhold (&lt;a href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;andir0815&quot;&gt;@andir0815&lt;&#x2F;a&gt;)
+for experimenting with the idea with me and telling me about
+&lt;code&gt;unsafeDiscardStringContext&lt;&#x2F;code&gt;. In my earlier prototype, I needed to do &amp;quot;Import
+from Derivation&amp;quot; to get rid of the string context!&lt;&#x2F;p&gt;
+&lt;p&gt;Thank you to Florian Klink (&lt;a href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;flokli&quot;&gt;@flokli&lt;&#x2F;a&gt;) and Andi
+(again!) for giving me valuable feedback on an earlier draft of this article.&lt;&#x2F;p&gt;
+&lt;p&gt;Mistakes are mine.&lt;&#x2F;p&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;1&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;1&lt;&#x2F;sup&gt;
+&lt;p&gt;runCommandLocal is from nixpkgs.&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;2&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;2&lt;&#x2F;sup&gt;
+&lt;p&gt;When running in sandboxed mode. Which you should to get all the beautiful
+properties of Nix.&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;3&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;3&lt;&#x2F;sup&gt;
+&lt;p&gt;To be more exact: Nix will check if the output path of the derivation
+already exists locally or at any of the given remote substituters (like
+cache.nixos.org). The output path, in turn, depends on the name and the
+outputHash.&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+</description>
+      </item>
+      <item>
+          <title>Nix: Superglue for immutable infrastructure</title>
+          <pubDate>Sat, 25 Apr 2020 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/nix-superglue-for-immutable-infrastructure/</link>
+          <guid>https://blog.eigenvalue.net/nix-superglue-for-immutable-infrastructure/</guid>
+          <description>&lt;p&gt;Or, how I rationalize my love of Nix.&lt;&#x2F;p&gt;
+&lt;p&gt;Nix markets itself as a “package manager.” I’d say “A principled build tool for
+everything that actually works.”&lt;&#x2F;p&gt;
+&lt;p&gt;Nix assembles your immutable infrastructure from thousands of little lego pieces
+and sticks them together with superglue. That super glue holds infinitely
+strong but, at your discretion, it becomes malleable like playdough.&lt;&#x2F;p&gt;
+&lt;p&gt;The adhesive might smell strongly academic and nausiate you. Then, you
+realize that a handful of powerful concepts bind everything together and you
+become intoxicated.&lt;&#x2F;p&gt;
+&lt;p&gt;Nix has been used to create a highly customizable collection of packages,
+Nixpkgs, that is the core of a complete, modern Linux distribution. Imagine!
+Driving the build of all these different programs that make up a Linux
+distribution...with one and only one build tool!&lt;&#x2F;p&gt;
+&lt;p&gt;You can build your immutable infrastructure on top of that. With distributed,
+reproducible builds that can be shared between all of your team.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;how-does-nix-work&quot;&gt;How does Nix work?&lt;&#x2F;h2&gt;
+&lt;p&gt;As all build systems, Nix splits the build into smaller build steps. One
+build step could compile a particular program to a binary. Another build step
+could create a config file. The final build step might combine those into a
+docker image.&lt;&#x2F;p&gt;
+&lt;p&gt;Simple? Nix calls these build steps “derivations.” Here you go, academic smell,
+but it really just means “build step” with inputs that executes some code that
+spits out the output that you so desire.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;hermetic-and-reproducible-lego-pieces&quot;&gt;Hermetic and reproducible lego pieces&lt;&#x2F;h3&gt;
+&lt;p&gt;Nix is a “hermetic build tool.” That means that it is very explicit and picky
+about the inputs to your derivations:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Nix considers the compiler binary and other used tools as part of the
+inputs. A lot of build tools ignore this and consider your output
+“up-to-date” even though you just upgraded your compiler.&lt;&#x2F;li&gt;
+&lt;li&gt;Nix needs to know the exact hashes&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#1&quot;&gt;1&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; of all inputs and uses them to detect
+changes. If you use files from your local file system in the build, Nix
+calculates their hash automatically for you. If you download it from
+elsewhere, you need to specify its hash yourself. All derivations are built
+in a sandbox to ensure that you don’t use undeclared inputs.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;This picky behavior makes reproducible builds possible&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#2&quot;&gt;2&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; and allows Nix to
+pull off some awesome tricks like:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Caching the outputs of each build step: As long as your compiler produces
+the same output with the same inputs, why repeat the build if the inputs
+didn’t change?&lt;&#x2F;li&gt;
+&lt;li&gt;Distributing the build across multiple machines: If I copy all the inputs to
+another machine, I can also build it there! I only need to copy the inputs
+that the other machine doesn’t already have so that I can usually skip
+copying the compiler.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;While your normal programming specific build tool (like npm, yarn, cargo, maven,
+sbt, leiningen) is usually not hermetic, some progamming language agnostic tools
+are (e.g. bazel, pants). Here we go, rock solid lego pieces. So, what makes Nix
+unique?&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;nix-the-language-glues-it-all-together&quot;&gt;Nix, the language, glues it all together&lt;&#x2F;h3&gt;
+&lt;p&gt;Nix build files are written in the Nix programming language. At first, it looks
+like an innocent little language with data types that are roughly equivalent to
+JSON but have different names: lists=arrays, attribute sets=object&#x2F;map, strings,
+numbers, booleans.&lt;&#x2F;p&gt;
+&lt;p&gt;But on top of that, Nix is a pure lazy functional language. What does that mean?
+It is an exciting and unusual choice for a build system! If you already had some
+experience with pure lazy functional programming and you know these concepts,
+good for you. For me, these concepts are mind-blowing.&lt;&#x2F;p&gt;
+&lt;p&gt;The “pure” means that:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;evaluating a Nix build file purely returns a description of all build steps
+(“derivations”) and does not yet execute them (that would be impure). Only
+after you finalized what you want to build, Nix looks at the graph of build
+steps and executes them -- in parallel, where it can. In practice, that
+means that you can easily take an existing build graph and return a slightly
+modified one without having to fear that you already invoked an expensive
+build step.&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#3&quot;&gt;3&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;debugging a Nix build file is easier because values don’t get changed behind
+the scenes. Once set, you can rely on them staying the same.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;“Lazy” in this context means that like a good lazy programmer, it will avoid
+doing unnecessary work. It will not evaluate all of your Nix code but only the
+parts that you explicitly use. E.g. you can use an attribute set (think JSON
+object&#x2F;map) with all packages in the NixOs distribution, pass it around as a
+whole and not fear that your evaluation time explodes. Nix will only fully
+evaluate the packages that you then actually use in your build file.“Lazyness”
+allows a number of additional simple but powerful patterns that are beyond this
+article.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;what-does-that-mean-in-practice&quot;&gt;What does that mean in practice?&lt;&#x2F;h2&gt;
+&lt;p&gt;Nix empowers you to bend the build to your will.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Do you want to ensure that all of your docker images use the exact same
+version of openssl? Easy.&lt;&#x2F;li&gt;
+&lt;li&gt;Do you want to use mostly the versions of the libraries in NixOS but you
+want to patch some with your magic source? You can. Everything that depends
+on the magic source will be automatically rebuilt.&lt;&#x2F;li&gt;
+&lt;li&gt;Do you want to upgrade a risky new library explicitly and independently for
+every container? Also possible.&lt;&#x2F;li&gt;
+&lt;li&gt;What about building all your docker images in two versions? One version with
+the currently deployed RPC library and one with the upgraded one for A&#x2F;B
+testing. Not a problem! No need to write a second configuration for every
+container, since you can easily abstract over all of your images. In fact,
+you probably don’t even need to touch the individual container
+configurations at all if you do this.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;so-what-is-the-catch&quot;&gt;So, what is the catch?&lt;&#x2F;h2&gt;
+&lt;p&gt;I am in love with Nix and while I try to stick to facts, I cannot be fully
+trusted. However, not everything is perfect in the Nix world. Here are three
+gotchas you will encounter digging into Nix:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Some of Nix’s concepts are highly unusual and most people need some time to
+let them sink in. I did!&lt;&#x2F;li&gt;
+&lt;li&gt;Nix and its community are not very prescriptive. Sounds good? In a way it is,
+but documentation often tells you what is possible and not so much if it is a
+good idea. Discovering how to write “good Nix” was quite hard for me.&lt;&#x2F;li&gt;
+&lt;li&gt;Nix is most fun if all your dependencies are Nix-ified. NixOS&#x2F;Nixpkgs is a
+huge package collection and has often got you covered but if not, you’ll have
+to work some and maybe some more to bootstrap. Since other build systems are
+a lot more permissive, some tools in your software stack may use some clever
+hacks - such as downloading a binary in a build script if you are missing a
+dependency - that are not allowed in Nix. That said, if it is too hard, you
+can just build this part outside of Nix and import it as a binary.&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#4&quot;&gt;4&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;Nix currently works well if either your particular language is well supported
+or you rather build your things inside nix with the original build tool -- in
+one step. The second approach is easier but requires Nix to rebuild
+everything in that step when things change.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;You might have guessed that I think these obstacles are well worth it!&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;how-to-get-started&quot;&gt;How to get started&lt;&#x2F;h2&gt;
+&lt;p&gt;You can install Nix under any Linux distribution and Mac OS and then start
+“Nix-ifying” one little corner of your universe. Download it from
+&lt;a href=&quot;https:&#x2F;&#x2F;nixos.org&#x2F;nix&#x2F;&quot;&gt;the Nix homepage&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;How to best proceed from there depends on your learning style! There are a lot
+of resources on &lt;a href=&quot;https:&#x2F;&#x2F;nixos.org&#x2F;learn.html&quot;&gt;the Nix &amp;quot;learn&amp;quot; page&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;1&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;1&lt;&#x2F;sup&gt;
+&lt;p&gt;A “cryptographic” hash, to be more exact. The hash allows Nix to quickly
+verify if anything at all in the input changed.&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;2&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;2&lt;&#x2F;sup&gt;
+&lt;p&gt;If you only invoke a reproducible compiler in your derivation, then this
+step will also be fully reproducible. Otherwise, the output is still cached and
+your colleagues will get the same result in practice.&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;3&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;3&lt;&#x2F;sup&gt;
+&lt;p&gt;The exception, that I know of, is the “import-from-derivation” feature.
+“import-from-derivation” allows you to build nix code with a tool of your choice
+and then include that in that same build.&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;4&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;4&lt;&#x2F;sup&gt;
+&lt;p&gt;But Nix is addictive. There will be this nearly irresistable urge to build
+it in Nix. At least for me. ;)&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+</description>
+      </item>
+    </channel>
+</rss>

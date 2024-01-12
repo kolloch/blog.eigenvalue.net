@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title>Peter Kolloch - Blog - Git: Using SSH Locally, But HTTPS in CI</title>
+
+      <link rel=icon href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">λ</text></svg>'>
+
+      <link rel="alternate" type="application/rss+xml" title="RSS" href="https://blog.eigenvalue.net/rss.xml">
+
+      
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/slideout/1.0.1/slideout.min.js"></script>
+          
+      
+
+      
+          <link href="https://fonts.googleapis.com/css2?family=Gudea&display=swap" rel="stylesheet">
+          <link rel="stylesheet" href="https://blog.eigenvalue.net/site.css">
+          
+      
+
+      
+      
+    </head>
+
+    <body>
+        <div class="container">
+
+            <div id="mobile-navbar" class="mobile-navbar">
+              <div class="mobile-header-logo">
+                <a href="/" class="logo">Peter Kolloch</a>
+              </div>
+              <div class="mobile-navbar-icon icon-out">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+
+            <nav id="mobile-menu" class="mobile-menu slideout-menu slideout-menu-left">
+              <ul class="mobile-menu-list">
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                            Home
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                            Tags
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                            About
+                        </a>
+                    </li>
+                
+              </ul>
+            </nav>
+
+            <header id="header">
+                <div class="logo"><a href="https:&#x2F;&#x2F;blog.eigenvalue.net">Peter Kolloch</a></div>
+                <nav class="menu">
+                    <ul>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                                    Home
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                                    Tags
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                                    About
+                                </a>
+                            </li>
+                        
+                    </ul>
+                </nav>
+            </header>
+
+            <main>
+                <div class="content" id="mobile-panel">
+                    
+
+
+
+<article class="post">
+    
+    <header class="post__header">
+        <h1 class="post__title">
+            <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;git-ssh-insteadof-https&#x2F;">Git: Using SSH Locally, But HTTPS in CI</a>
+        </h1>
+        <div class="post__meta">
+            <span class="post__time">2023-08-01</span>
+            
+        </div>
+    </header>
+
+    <div class="post-content">
+      <p>In my workflow with <a href="https://git-scm.com/">Git</a>, I prefer using SSH
+authentication for platforms like <a href="https://github.com">GitHub</a> and
+<a href="https://gitlab.com">GitLab</a>. It allows me to avoid saving multiple credentials
+on my machine; instead, I simply register my already existing public SSH key in
+my account settings. It seems like a clear victory, right?</p>
+<p>Unfortunately, it's not a one-size-fits-all solution:</p>
+<ul>
+<li>Recently, I encountered an issue that could be easily resolved using Git
+submodules in GitLab CI. GitLab has the ability to automatically check out
+submodules, albeit only if they are referenced using their HTTPS URLs.</li>
+<li>The convenience of copying and pasting HTTPS URLs of GitLab/GitHub
+repositories directly into your <code>git clone</code> command is undeniable. I've been
+guilty of lazily using these HTTPS URLs when I assumed I'd only need read-only
+access, only to later realize that I had to switch them over to SSH URLs...</li>
+</ul>
+<p>However, to my surprise, I discovered the following configuration options in
+Git. You can actually substitute the visible URLs of remote repositories based
+on their prefixes! This means that you can use SSH for local development and
+HTTPS for CI environments without having to manually switch back and forth.</p>
+<p>Here's how to do it:</p>
+<pre data-lang="toml" class="language-toml "><code class="language-toml" data-lang="toml">[url &quot;ssh:&#x2F;&#x2F;git@github.com&#x2F;&quot;]
+    insteadOf = https:&#x2F;&#x2F;github.com&#x2F;
+[url &quot;ssh:&#x2F;&#x2F;git@gitlab.com&#x2F;&quot;]
+    insteadOf = https:&#x2F;&#x2F;gitlab.com&#x2F;
+</code></pre>
+<p>This config ensures that every time you try to interact with a remote URL that
+starts with <code>https://github.com/</code> or <code>https://gitlab.com/</code>, Git will substitute
+it with the corresponding SSH URL. This means you can continue using HTTPS URLs
+in your <code>.gitmodules</code> file, but when you clone or pull locally, it will use SSH.
+It also works for <code>git clone</code>.</p>
+<p>I have no idea how I missed this feature before, but it's certainly a quality of
+life improvement.</p>
+
+    </div>
+
+    
+    
+
+    <div class="post-footer">
+        
+            
+                <div class="post-tags">
+                    
+                        <a href="https://blog.eigenvalue.net/tags/git/">#git</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/config/">#config</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/submodules/">#submodules</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/https/">#https</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/ssh/">#ssh</a>
+                    
+                </div>
+            
+            
+
+        
+
+    </div>
+
+    
+    
+</article>
+
+
+                </div>
+            </main>
+
+            
+            
+        </div>
+
+      
+          <script type="text/javascript" src="https://blog.eigenvalue.net/even.js" ></script>
+      
+    </body>
+
+</html>

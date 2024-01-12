@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title>Peter Kolloch - Blog - Tutorial: Building our Astro Starlight page with Nix &amp; flake.parts</title>
+
+      <link rel=icon href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">λ</text></svg>'>
+
+      <link rel="alternate" type="application/rss+xml" title="RSS" href="https://blog.eigenvalue.net/rss.xml">
+
+      
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/slideout/1.0.1/slideout.min.js"></script>
+          
+      
+
+      
+          <link href="https://fonts.googleapis.com/css2?family=Gudea&display=swap" rel="stylesheet">
+          <link rel="stylesheet" href="https://blog.eigenvalue.net/site.css">
+          
+      
+
+      
+      
+    </head>
+
+    <body>
+        <div class="container">
+
+            <div id="mobile-navbar" class="mobile-navbar">
+              <div class="mobile-header-logo">
+                <a href="/" class="logo">Peter Kolloch</a>
+              </div>
+              <div class="mobile-navbar-icon icon-out">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+
+            <nav id="mobile-menu" class="mobile-menu slideout-menu slideout-menu-left">
+              <ul class="mobile-menu-list">
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                            Home
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                            Tags
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                            About
+                        </a>
+                    </li>
+                
+              </ul>
+            </nav>
+
+            <header id="header">
+                <div class="logo"><a href="https:&#x2F;&#x2F;blog.eigenvalue.net">Peter Kolloch</a></div>
+                <nav class="menu">
+                    <ul>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                                    Home
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                                    Tags
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                                    About
+                                </a>
+                            </li>
+                        
+                    </ul>
+                </nav>
+            </header>
+
+            <main>
+                <div class="content" id="mobile-panel">
+                    
+
+
+
+<article class="post">
+    
+    <header class="post__header">
+        <h1 class="post__title">
+            <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;2024-astro-starlight-with-nix&#x2F;">Tutorial: Building our Astro Starlight page with Nix &amp; flake.parts</a>
+        </h1>
+        <div class="post__meta">
+            <span class="post__time">2024-01-11</span>
+            
+        </div>
+    </header>
+
+    <div class="post-content">
+      <p>Recently, I migrated the unwieldy README.md of
+crate2nix to <a href="https://nix-community.github.io/crate2nix/">a much more structured GitHub page</a>. 
+After some research, I settled on
+<a href="https://astro.build/">Astro</a> with the <a href="https://starlight.astro.build/">Starlight Theme</a>
+since I had head good things about Astro at the NixCon 2023 in Darmstadt (happy times!).</p>
+<p>This is an especially appealing choice if you want to</p>
+<ul>
+<li>start easy with mostly simple documentation in <code>*.md</code> files, but</li>
+<li>potentially later extend it with some client-side logic with <a href="https://react.dev/">React</a>.</li>
+</ul>
+<p>But on we go! Let's get our GitHub Page up and running. </p>
+<h2 id="what-you-need-to-get-started">What you need to get started</h2>
+<p>This is a follow up on <a href="../2024-flake-parts-nodejs-devshell">Tutorial: Using flake-parts to set up a nodejs devshell</a>. We assume that you already have set up</p>
+<ul>
+<li>a flake-based project using <a href="https://flake.parts/">flake.parts</a>, and</li>
+<li>setup a devshell with the right version of <code>npm</code>.</li>
+</ul>
+<h2 id="creating-the-docs-directory">Creating the docs directory</h2>
+<p>Now that we have <code>npm</code> at hand, we can follow the instructions of Starlight
+on how to get started and answer the prompts as they come:</p>
+<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">❯ npm create astro@latest -- --template starlight
+
+ astro   Launch sequence initiated.
+
+   dir   Where should we create your new project?
+         .&#x2F;docs
+      ◼  tmpl Using starlight as project template
+
+  deps   Install dependencies?
+         Yes
+
+    ts   Do you plan to write TypeScript?
+         Yes
+
+   use   How strict should TypeScript be?
+         Strict
+
+   git   Initialize a new git repository?
+         No
+      ◼  Sounds good! You can always run git init manually.
+
+      ✔  Project initialized!
+         ■ Template copied
+         ■ Dependencies installed
+         ■ TypeScript customized
+
+  next   Liftoff confirmed. Explore your project!
+
+         Enter your project directory using cd .&#x2F;docs
+         Run npm run dev to start the dev server. CTRL+C to stop.
+         Add frameworks like react or tailwind using astro add.
+
+         Stuck? Join us at https:&#x2F;&#x2F;astro.build&#x2F;chat
+
+╭──🎁─╮  Houston:
+│ ◠ ◡ ◠  Good luck out there, astronaut! 🚀
+╰─────╯
+</code></pre>
+<h2 id="local-development">Local development</h2>
+<p>For local development, you can use a fast turn-around npm-based
+workflow:</p>
+<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">❯ npm run dev
+
+&gt; docs@0.0.1 dev
+&gt; astro dev
+
+
+ astro  v4.1.1 ready in 590 ms
+
+┃ Local    http:&#x2F;&#x2F;localhost:4321&#x2F;
+┃ Network  use --host to expose
+
+23:13:21 [WARN] [content] The i18n collection is defined but no content&#x2F;i18n folder exists in the content directory. Create a new folder for the collection, or check your content configuration file for typos.
+23:13:21 watching for file changes...
+</code></pre>
+<p>The exposed web server will update as you edit or
+display any potential errors.</p>
+<p>The <code>npm</code> and <code>node</code> are supplied by nix and all
+collaborators with nix and direnv will seamlessly
+have the same version available.</p>
+<p>But what about reproducible production builds?</p>
+<h2 id="hermetic-build-with-nix">Hermetic build with nix</h2>
+<p>Let's say we are satisfied with our edits and want a reproducible
+build of our docs. Copy the following as <code>flake-module.nix</code>
+into your docs folder:</p>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix"># docs&#x2F;flake-module.nix
+{
+perSystem = { config, self&#x27;, inputs&#x27;, pkgs, lib, system, ... }: {
+    packages.docs = pkgs.buildNpmPackage {
+      pname = &quot;docs&quot;;
+      version = &quot;0.1.0&quot;;
+
+      inherit (config.packages) nodejs;
+
+      src = .&#x2F;.;
+
+      buildInputs = [
+        pkgs.vips
+      ];
+
+      nativeBuildInputs = [
+        pkgs.pkg-config
+      ];
+
+      installPhase = &#x27;&#x27;
+        runHook preInstall
+        cp -pr --reflink=auto dist $out&#x2F;
+        runHook postInstall
+      &#x27;&#x27;;
+
+      npmDepsHash = &quot;&quot;;
+    };
+  };
+}
+</code></pre>
+<p>You remember our drill from the last article? You have to
+add the new <code>./docs/flake-module.nix</code> to the imports
+in your <code>flake.nix</code> and ensure that all relevant files
+have been added to the git index with <code>git add</code>.</p>
+<p>You can now try to build your docs like this:</p>
+<pre data-lang="bash" class="language-bash "><code class="language-bash" data-lang="bash">nix build -L .#docs
+</code></pre>
+<p>Did you notice the empty string for the <code>npmDepsHash</code>
+before? Well, now nix will complain about this while also
+telling us the expected value:</p>
+<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">...
+warning: found empty hash, assuming &#x27;sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=&#x27;
+error: hash mismatch in fixed-output derivation &#x27;&#x2F;nix&#x2F;store&#x2F;mpnydavlxdww9fv2n2aic5mwnapnch7f-docs-0.1.0-npm-deps.drv&#x27;:
+         specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+            got:    sha256-iyz7+GeVYNDa0cLlz8PGmTNAQVetnt87ndfP0vUjxLw=
+error: 1 dependencies of derivation &#x27;&#x2F;nix&#x2F;store&#x2F;dcrayn9gy58hk0raq53ssca3h2js3alp-docs-0.1.0.drv&#x27; failed to build
+</code></pre>
+<p>We'll update <code>npmDepsHash</code> accordingly in our <code>flake-module.nix</code>:</p>
+<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">{
+  # ...
+      npmDepsHash = &quot;sha256-iyz7+GeVYNDa0cLlz8PGmTNAQVetnt87ndfP0vUjxLw=&quot;;
+  # ...
+}
+</code></pre>
+<p>NOTE: Your hash value will be different if any of the dependencies have
+a new version in the starlight template! Use the hash that nix has
+output behind &quot;got.&quot;</p>
+<p>Now <code>nix build .#docs</code> should build your docs, store them in the <code>/nix/store</code>
+and provide a symlink called <code>result</code> to them:</p>
+<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">❯ ls -al result&#x2F;
+total 72
+dr-xr-xr-x      9 root  wheel       288 Jan  1  1970 .
+drwxrwxr-t@ 65535 root  nixbld  5130176 Jan 11 23:33 ..
+-r--r--r--      1 root  wheel      8474 Jan  1  1970 404.html
+dr-xr-xr-x     10 root  wheel       320 Jan  1  1970 _astro
+-r--r--r--      1 root  wheel       696 Jan  1  1970 favicon.svg
+dr-xr-xr-x      3 root  wheel        96 Jan  1  1970 guides
+-r--r--r--      1 root  wheel     17758 Jan  1  1970 index.html
+dr-xr-xr-x     14 root  wheel       448 Jan  1  1970 pagefind
+dr-xr-xr-x      3 root  wheel        96 Jan  1  1970 reference
+</code></pre>
+<p>Woooo! Our docs!</p>
+<h2 id="gitignore">.gitignore</h2>
+<p>Well, when committing our changes, we'll see the &quot;result&quot; symlink.</p>
+<p>We should add it to <code>.gitignore</code>:</p>
+<pre data-lang="bash" class="language-bash "><code class="language-bash" data-lang="bash">echo &quot;result*&quot; &gt;&gt;.gitignore
+</code></pre>
+<p>The star makes it also cover builds with multiple results.</p>
+<p>Why didn't we create a <code>.gitignore</code> for the <code>npm_modules</code> etc? It
+was already done for us by the starlight template.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>It was easy to build our Starlight page with nix.
+But this is mostly useful, if we also deploy it somewhere!</p>
+<p>Let's do that in the next episode of this tutorial.</p>
+<p>Feel free to give me feedback/ask questions at <a href="https://discourse.nixos.org/t/tutorial-using-flake-parts-to-set-up-a-nodejs-devshell/37940">discourse</a> or in a
+<a href="https://github.com/kolloch/blog.eigenvalue.net/issues">GitHub issue</a>. I want
+to hear your thoughts: so feel free to err on the side of commenting too much.</p>
+
+    </div>
+
+    
+    
+
+    <div class="post-footer">
+        
+            
+                <div class="post-tags">
+                    
+                        <a href="https://blog.eigenvalue.net/tags/nix/">#nix</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/javascript/">#JavaScript</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/typescript/">#TypeScript</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/astro/">#Astro</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/flake-parts/">#flake-parts</a>
+                    
+                </div>
+            
+            
+
+        
+
+    </div>
+
+    
+    
+</article>
+
+
+                </div>
+            </main>
+
+            
+            
+        </div>
+
+      
+          <script type="text/javascript" src="https://blog.eigenvalue.net/even.js" ></script>
+      
+    </body>
+
+</html>

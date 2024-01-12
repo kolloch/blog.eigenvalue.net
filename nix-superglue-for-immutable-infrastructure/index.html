@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+      <!-- Enable responsiveness on mobile devices-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+      <title>Peter Kolloch - Blog - Nix: Superglue for immutable infrastructure</title>
+
+      <link rel=icon href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">λ</text></svg>'>
+
+      <link rel="alternate" type="application/rss+xml" title="RSS" href="https://blog.eigenvalue.net/rss.xml">
+
+      
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/slideout/1.0.1/slideout.min.js"></script>
+          
+      
+
+      
+          <link href="https://fonts.googleapis.com/css2?family=Gudea&display=swap" rel="stylesheet">
+          <link rel="stylesheet" href="https://blog.eigenvalue.net/site.css">
+          
+      
+
+      
+      
+    </head>
+
+    <body>
+        <div class="container">
+
+            <div id="mobile-navbar" class="mobile-navbar">
+              <div class="mobile-header-logo">
+                <a href="/" class="logo">Peter Kolloch</a>
+              </div>
+              <div class="mobile-navbar-icon icon-out">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+
+            <nav id="mobile-menu" class="mobile-menu slideout-menu slideout-menu-left">
+              <ul class="mobile-menu-list">
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                            Home
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                            Tags
+                        </a>
+                    </li>
+                
+                    <li class="mobile-menu-item">
+                        <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                            About
+                        </a>
+                    </li>
+                
+              </ul>
+            </nav>
+
+            <header id="header">
+                <div class="logo"><a href="https:&#x2F;&#x2F;blog.eigenvalue.net">Peter Kolloch</a></div>
+                <nav class="menu">
+                    <ul>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net">
+                                    Home
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;tags">
+                                    Tags
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;about">
+                                    About
+                                </a>
+                            </li>
+                        
+                    </ul>
+                </nav>
+            </header>
+
+            <main>
+                <div class="content" id="mobile-panel">
+                    
+
+
+
+<article class="post">
+    
+    <header class="post__header">
+        <h1 class="post__title">
+            <a href="https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;nix-superglue-for-immutable-infrastructure&#x2F;">Nix: Superglue for immutable infrastructure</a>
+        </h1>
+        <div class="post__meta">
+            <span class="post__time">2020-04-25</span>
+            
+        </div>
+    </header>
+
+    <div class="post-content">
+      <p>Or, how I rationalize my love of Nix.</p>
+<p>Nix markets itself as a “package manager.” I’d say “A principled build tool for
+everything that actually works.”</p>
+<p>Nix assembles your immutable infrastructure from thousands of little lego pieces
+and sticks them together with superglue. That super glue holds infinitely
+strong but, at your discretion, it becomes malleable like playdough.</p>
+<p>The adhesive might smell strongly academic and nausiate you. Then, you
+realize that a handful of powerful concepts bind everything together and you
+become intoxicated.</p>
+<p>Nix has been used to create a highly customizable collection of packages,
+Nixpkgs, that is the core of a complete, modern Linux distribution. Imagine!
+Driving the build of all these different programs that make up a Linux
+distribution...with one and only one build tool!</p>
+<p>You can build your immutable infrastructure on top of that. With distributed,
+reproducible builds that can be shared between all of your team.</p>
+<h2 id="how-does-nix-work">How does Nix work?</h2>
+<p>As all build systems, Nix splits the build into smaller build steps. One
+build step could compile a particular program to a binary. Another build step
+could create a config file. The final build step might combine those into a
+docker image.</p>
+<p>Simple? Nix calls these build steps “derivations.” Here you go, academic smell,
+but it really just means “build step” with inputs that executes some code that
+spits out the output that you so desire.</p>
+<h3 id="hermetic-and-reproducible-lego-pieces">Hermetic and reproducible lego pieces</h3>
+<p>Nix is a “hermetic build tool.” That means that it is very explicit and picky
+about the inputs to your derivations:</p>
+<ol>
+<li>Nix considers the compiler binary and other used tools as part of the
+inputs. A lot of build tools ignore this and consider your output
+“up-to-date” even though you just upgraded your compiler.</li>
+<li>Nix needs to know the exact hashes<sup class="footnote-reference"><a href="#1">1</a></sup> of all inputs and uses them to detect
+changes. If you use files from your local file system in the build, Nix
+calculates their hash automatically for you. If you download it from
+elsewhere, you need to specify its hash yourself. All derivations are built
+in a sandbox to ensure that you don’t use undeclared inputs.</li>
+</ol>
+<p>This picky behavior makes reproducible builds possible<sup class="footnote-reference"><a href="#2">2</a></sup> and allows Nix to
+pull off some awesome tricks like:</p>
+<ul>
+<li>Caching the outputs of each build step: As long as your compiler produces
+the same output with the same inputs, why repeat the build if the inputs
+didn’t change?</li>
+<li>Distributing the build across multiple machines: If I copy all the inputs to
+another machine, I can also build it there! I only need to copy the inputs
+that the other machine doesn’t already have so that I can usually skip
+copying the compiler.</li>
+</ul>
+<p>While your normal programming specific build tool (like npm, yarn, cargo, maven,
+sbt, leiningen) is usually not hermetic, some progamming language agnostic tools
+are (e.g. bazel, pants). Here we go, rock solid lego pieces. So, what makes Nix
+unique?</p>
+<h3 id="nix-the-language-glues-it-all-together">Nix, the language, glues it all together</h3>
+<p>Nix build files are written in the Nix programming language. At first, it looks
+like an innocent little language with data types that are roughly equivalent to
+JSON but have different names: lists=arrays, attribute sets=object/map, strings,
+numbers, booleans.</p>
+<p>But on top of that, Nix is a pure lazy functional language. What does that mean?
+It is an exciting and unusual choice for a build system! If you already had some
+experience with pure lazy functional programming and you know these concepts,
+good for you. For me, these concepts are mind-blowing.</p>
+<p>The “pure” means that:</p>
+<ul>
+<li>evaluating a Nix build file purely returns a description of all build steps
+(“derivations”) and does not yet execute them (that would be impure). Only
+after you finalized what you want to build, Nix looks at the graph of build
+steps and executes them -- in parallel, where it can. In practice, that
+means that you can easily take an existing build graph and return a slightly
+modified one without having to fear that you already invoked an expensive
+build step.<sup class="footnote-reference"><a href="#3">3</a></sup></li>
+<li>debugging a Nix build file is easier because values don’t get changed behind
+the scenes. Once set, you can rely on them staying the same.</li>
+</ul>
+<p>“Lazy” in this context means that like a good lazy programmer, it will avoid
+doing unnecessary work. It will not evaluate all of your Nix code but only the
+parts that you explicitly use. E.g. you can use an attribute set (think JSON
+object/map) with all packages in the NixOs distribution, pass it around as a
+whole and not fear that your evaluation time explodes. Nix will only fully
+evaluate the packages that you then actually use in your build file.“Lazyness”
+allows a number of additional simple but powerful patterns that are beyond this
+article.</p>
+<h2 id="what-does-that-mean-in-practice">What does that mean in practice?</h2>
+<p>Nix empowers you to bend the build to your will.</p>
+<ul>
+<li>Do you want to ensure that all of your docker images use the exact same
+version of openssl? Easy.</li>
+<li>Do you want to use mostly the versions of the libraries in NixOS but you
+want to patch some with your magic source? You can. Everything that depends
+on the magic source will be automatically rebuilt.</li>
+<li>Do you want to upgrade a risky new library explicitly and independently for
+every container? Also possible.</li>
+<li>What about building all your docker images in two versions? One version with
+the currently deployed RPC library and one with the upgraded one for A/B
+testing. Not a problem! No need to write a second configuration for every
+container, since you can easily abstract over all of your images. In fact,
+you probably don’t even need to touch the individual container
+configurations at all if you do this.</li>
+</ul>
+<h2 id="so-what-is-the-catch">So, what is the catch?</h2>
+<p>I am in love with Nix and while I try to stick to facts, I cannot be fully
+trusted. However, not everything is perfect in the Nix world. Here are three
+gotchas you will encounter digging into Nix:</p>
+<ol>
+<li>Some of Nix’s concepts are highly unusual and most people need some time to
+let them sink in. I did!</li>
+<li>Nix and its community are not very prescriptive. Sounds good? In a way it is,
+but documentation often tells you what is possible and not so much if it is a
+good idea. Discovering how to write “good Nix” was quite hard for me.</li>
+<li>Nix is most fun if all your dependencies are Nix-ified. NixOS/Nixpkgs is a
+huge package collection and has often got you covered but if not, you’ll have
+to work some and maybe some more to bootstrap. Since other build systems are
+a lot more permissive, some tools in your software stack may use some clever
+hacks - such as downloading a binary in a build script if you are missing a
+dependency - that are not allowed in Nix. That said, if it is too hard, you
+can just build this part outside of Nix and import it as a binary.<sup class="footnote-reference"><a href="#4">4</a></sup></li>
+<li>Nix currently works well if either your particular language is well supported
+or you rather build your things inside nix with the original build tool -- in
+one step. The second approach is easier but requires Nix to rebuild
+everything in that step when things change.</li>
+</ol>
+<p>You might have guessed that I think these obstacles are well worth it!</p>
+<h2 id="how-to-get-started">How to get started</h2>
+<p>You can install Nix under any Linux distribution and Mac OS and then start
+“Nix-ifying” one little corner of your universe. Download it from
+<a href="https://nixos.org/nix/">the Nix homepage</a>.</p>
+<p>How to best proceed from there depends on your learning style! There are a lot
+of resources on <a href="https://nixos.org/learn.html">the Nix &quot;learn&quot; page</a>.</p>
+<div class="footnote-definition" id="1"><sup class="footnote-definition-label">1</sup>
+<p>A “cryptographic” hash, to be more exact. The hash allows Nix to quickly
+verify if anything at all in the input changed.</p>
+</div>
+<div class="footnote-definition" id="2"><sup class="footnote-definition-label">2</sup>
+<p>If you only invoke a reproducible compiler in your derivation, then this
+step will also be fully reproducible. Otherwise, the output is still cached and
+your colleagues will get the same result in practice.</p>
+</div>
+<div class="footnote-definition" id="3"><sup class="footnote-definition-label">3</sup>
+<p>The exception, that I know of, is the “import-from-derivation” feature.
+“import-from-derivation” allows you to build nix code with a tool of your choice
+and then include that in that same build.</p>
+</div>
+<div class="footnote-definition" id="4"><sup class="footnote-definition-label">4</sup>
+<p>But Nix is addictive. There will be this nearly irresistable urge to build
+it in Nix. At least for me. ;)</p>
+</div>
+
+    </div>
+
+    
+    
+
+    <div class="post-footer">
+        
+            
+                <div class="post-tags">
+                    
+                        <a href="https://blog.eigenvalue.net/tags/nix/">#nix</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/nixos/">#nixos</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/immutable-infrastructure/">#immutable infrastructure</a>
+                    
+                        <a href="https://blog.eigenvalue.net/tags/hermetic-build/">#hermetic build</a>
+                    
+                </div>
+            
+            
+
+        
+
+    </div>
+
+    
+    
+</article>
+
+
+                </div>
+            </main>
+
+            
+            
+        </div>
+
+      
+          <script type="text/javascript" src="https://blog.eigenvalue.net/even.js" ></script>
+      
+    </body>
+
+</html>
