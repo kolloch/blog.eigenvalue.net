@@ -1,0 +1,428 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Peter Kolloch - Blog - Linux</title>
+      <link>https://blog.eigenvalue.net</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.eigenvalue.net/tags/linux/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Sat, 04 Nov 2023 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>Nix: Distributing private&#x2F;public binaries</title>
+          <pubDate>Sat, 04 Nov 2023 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/2023-nix-for-private-binaries/</link>
+          <guid>https://blog.eigenvalue.net/2023-nix-for-private-binaries/</guid>
+          <description xml:base="https://blog.eigenvalue.net/2023-nix-for-private-binaries/">&lt;p&gt;Getting proprietary binaries, scripts to your co-workers is so hard! And that is
+a shame because CLIs are awesome:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Composable. It is very easy to write a little wrapper around another CLI that
+adds some functionality.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Easy to write. Much easier than a web app.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;...&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;I should write another article on that!&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;the-problem&quot;&gt;The problem&lt;&#x2F;h2&gt;
+&lt;p&gt;You say: &quot;How hard is it really? Can&#x27;t you do a release on GitLab&#x2F;GitHub and
+provide some download links? They are already protected by private
+authentication.&quot;&lt;&#x2F;p&gt;
+&lt;p&gt;Yeah, sure. But there are some problems:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Version consistency. Everyone &lt;em&gt;might&lt;&#x2F;em&gt; download the binaries they need on
+demand resulting in a unique versioning footprint on every dev machine. Or are
+you naive enough that your developers update their kubectl version with plugins
+and third-party tools relying on it when you announce a new Kubernetes upgrade?
+There are more fun ways to spend your time than asking again and again: Have
+you upgraded CLI X yet?&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Packaging different language runtimes. Yeah, your Go or Rust binary might be
+somewhat easy to distribute. What about a Python script? A TypeScript CLI? So
+you need to package the runtime environment for your script as well. But not
+interfere with the local development setup.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;the-solution&quot;&gt;The solution?&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;strong&gt;nix &amp;amp; the nixpkgs&lt;&#x2F;strong&gt;* collection.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;nixos.org&quot;&gt;Nix&lt;&#x2F;a&gt; is many things but it is also &lt;strong&gt;a package manager that
+works on Linux&#x2F;Mac OS&lt;&#x2F;strong&gt;. It does NOT support Windows directly but my coworkers
+are fine with working in a WSL2 shell.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Awesome &lt;code&gt;direnv&lt;&#x2F;code&gt; integration: Imagine the right set of tools automatically
+available to you if you enter a project directory! And that also sets up commit
+hooks etc for you. That is &lt;code&gt;direnv&lt;&#x2F;code&gt; + &lt;code&gt;nix&lt;&#x2F;code&gt;. Have a look at
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;devenv.sh&#x2F;&quot;&gt;devenv&lt;&#x2F;a&gt; if you want to play around with it quickly!&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;nixpkgs&lt;&#x2F;code&gt; collection: &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;search.nixos.org&#x2F;packages&quot;&gt;A vast collection of prepackaged
+software&lt;&#x2F;a&gt;, your favorite programming
+language tooling is most likely among them.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Flake ecosystem: Flakes are a simple way to package nix libraries and binaries
+outside of the main &lt;code&gt;nixpkgs&lt;&#x2F;code&gt; collection.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Very flexible packaging options:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;- Already have some binaries? Great! You can integrate them into your&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  package bundle by supplying a download URL and a hash for all of them.&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;- Bundle up your Python script with a runtime environment? Quite easy.&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;- ...&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Works alongside other package managers! Your users can keep using home brew or
+their native package managers for their personal preferences. Nix will not
+overwrite the global Python installation just because your script needs it.
+Even if you make tools available via direnv for a project, they are only in
+your path when you are in the project folder!&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;ecosystem&quot;&gt;Ecosystem&lt;&#x2F;h2&gt;
+&lt;p&gt;The Nix ecosystem is thriving. E.g. look at the commits in the
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nixpkgs&quot;&gt;nixpkgs&lt;&#x2F;a&gt; repository to have a glimpse at the
+vibrant open source community! There are also &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;nixos.org&#x2F;community&#x2F;&quot;&gt;multiple popular communication
+channels&lt;&#x2F;a&gt; where you can get help and discuss your
+ideas.&lt;&#x2F;p&gt;
+&lt;p&gt;But the ecosystem definitely also profits from contributions of various
+companies including Big Tech and companies fairly specialized on Nix or builds.&lt;&#x2F;p&gt;
+&lt;p&gt;Need commercial support? You are covered.&lt;&#x2F;p&gt;
+&lt;p&gt;There are several companies that bet on using Nix as a basis for dev tooling so
+I am sure that package support will even get better.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;the-rough-edges-of-nix-itself&quot;&gt;The rough edges of nix itself&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;em&gt;Flake&#x27;s status&lt;&#x2F;em&gt;*: You remember Flakes that I mentioned above? Well, technically,
+this is an experimental feature. They have been around for years, whole
+ecosystems have been built around it, but officially, they might still change in
+incompatible ways!&lt;&#x2F;p&gt;
+&lt;p&gt;I am obviously not the only one that has noticed this as a big problem and the
+consensus is that while not officially stable, they have such wide-spread use
+that keeping them working is a big priority nevertheless.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;em&gt;Simple but exotic language&lt;&#x2F;em&gt;: The Nix ecosystem is built around the nix
+programming language. That is a simple and mostly well-designed language but it
+is not mainstream. The combination of being dynamically typed and lazy-evaluated
+by default makes debugging sometimes quite cumbersome.&lt;&#x2F;p&gt;
+&lt;p&gt;Nix allows some amazing freedom but it can be hard to orient at times: E.g. Nix
+doesn&#x27;t impose much structure on your code and you need to rely on best
+practices on which there are diverse opinions.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;using-nix-in-the-enterprise&quot;&gt;Using nix in the enterprise&lt;&#x2F;h2&gt;
+&lt;p&gt;In my company, I have just started the journey and only completed the first
+steps. Here is an outline of what I did and am about to do. Feel free to chime
+in and suggest better paths for me!&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;streamline-the-nix-installation-experience&quot;&gt;Streamline the nix installation experience&lt;&#x2F;h3&gt;
+&lt;p&gt;What do I want?&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Simple installation instructions with as few steps as possible.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Should work for developers who already set up some things and for people that
+have just started in the company.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;If you run it again, it should simply update everything to the latest software
+version and config version.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Therefore, I created
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;gitlab.com&#x2F;nexxiot-labs&#x2F;nix-bootstrap&quot;&gt;nix-bootstrap&lt;&#x2F;a&gt; that takes care
+of:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Installing nix with
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;DeterminateSystems&#x2F;nix-installer&quot;&gt;nix-installer&lt;&#x2F;a&gt;. I love
+Determinate System&#x27;s mission to get rid of annoying papercuts like e.g. broken
+installs after Mac OS upgrades.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Deterministic versions of &lt;code&gt;nix-installer&lt;&#x2F;code&gt;, &lt;code&gt;nix&lt;&#x2F;code&gt;, and
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;maralorn&#x2F;nix-output-monitor&quot;&gt;&lt;code&gt;nom&lt;&#x2F;code&gt;&lt;&#x2F;a&gt;. Rather than just
+always installing the latest ones.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Working shell completions for &lt;code&gt;nix&lt;&#x2F;code&gt; commands and other software installed in
+the user profile. &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;DeterminateSystems&#x2F;nix-installer&quot;&gt;This will hopefully be
+fixed&lt;&#x2F;a&gt; in the installer
+script of nix that nix-installer also uses. Meanwhile I included a fix in
+&lt;code&gt;nix-bootstrap&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Installing &lt;code&gt;direnv&lt;&#x2F;code&gt;. &lt;code&gt;direnv&lt;&#x2F;code&gt; is unfortunately &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;DeterminateSystems&#x2F;nix-installer&#x2F;issues&#x2F;703#issuecomment-1791262857&quot;&gt;out of scope for
+nix-installer&lt;&#x2F;a&gt;,
+so I also install it as part of the bootstrap nix profile that I install
+system-wide and for the installing user.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Setting up credentials for private GitLab repositories.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;All triggered with a simple shell command:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;bash -c &amp;quot;$(curl https:&#x2F;&#x2F;nexxiot-labs.gitlab.io&#x2F;nix-bootstrap&#x2F;install.sh)&amp;quot;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;I am happy to collaborate with others on improving this or upstreaming fixes to
+nix&#x2F;nix-installer.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;ci-support-for-nix-in-gitlab&quot;&gt;CI support for nix in GitLab&lt;&#x2F;h3&gt;
+&lt;p&gt;Generally, the main nix projects are all on GitHub and, therefore, GitHub is
+better supported by the ecosystem. That said, using GitLab CI with nix is not
+super difficult.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Creating a CI container. Nicely minimal but still everything that is needed.
+E.g. GitLab CI expects a &lt;code&gt;grep&lt;&#x2F;code&gt; before I even get a chance to execute a &lt;code&gt;nix&lt;&#x2F;code&gt;
+command to install it. &lt;code&gt;nixpkgs&#x2F;nix-flakes&lt;&#x2F;code&gt; is nicely minimal and does not
+include it. I used the new cool kid on the block &lt;code&gt;nix2container&lt;&#x2F;code&gt; but it has &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;nlewo&#x2F;nix2container&#x2F;issues&#x2F;94&quot;&gt;a
+problem that gets only triggered if you build the container itself within that
+container.&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Allowing CI access to a nix substituter (= cache). Allowing read&#x2F;write access
+to an S3 bucket was easy in our setup but it is much harder to share that
+access with users -- see below.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Allowing nix in GitLab CI to fetch binary artifacts from other private repos.
+Absolutely not straight-forward to inject the right credentials into the fetch
+build step, especially since &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;gitlab.com&#x2F;gitlab-org&#x2F;gitlab&#x2F;-&#x2F;issues&#x2F;341157&quot;&gt;GitLab does not support Basic Auth in its
+API&lt;&#x2F;a&gt;. Please say I am
+wrong and there is an easy way!&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Mac OS binaries. At least for our internal CLI tools, we&#x27;d want Mac OS support
+but we don&#x27;t have CI runners for Mac OS and cross-compiling is tricky and
+maybe not even reliably possible. Maybe I&#x27;ll just test &amp;amp; push them manually
+into the cache on releases.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;local-install-support&quot;&gt;Local install support&lt;&#x2F;h3&gt;
+&lt;p&gt;If users install an unchanged flake, read-access to a binary cache (=substituter
+in nix lingo) should be sufficient. If that is prefilled by CI and&#x2F;or manual
+steps as needed -- all cache requests should be hits.&lt;&#x2F;p&gt;
+&lt;p&gt;Unfortunately, we only allow temporary AWS session credentials for our users.
+Passing &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;5723&quot;&gt;those to the nix-daemon is
+not really possible&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;Using &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;www.cachix.org&#x2F;&quot;&gt;Cachix&lt;&#x2F;a&gt; instead would be a serious contender
+with fair prices. Unfortunately, that would require additional onboarding &#x2F;
+offboarding steps for both our IT and the developers itself. Maybe that can be
+solved with SSO support in the future!&lt;&#x2F;p&gt;
+&lt;p&gt;What is more, all systems we interact with, need to be approved by our Internal
+IT reviews. For AWS S3, since we are already using it, this is not necessary.&lt;&#x2F;p&gt;
+&lt;p&gt;So here I am still wondering what the best path forward is!&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;local-build-support&quot;&gt;Local build support&lt;&#x2F;h3&gt;
+&lt;p&gt;Obviously, local builds should also work when working on internal tool release.
+So we need to solve the authentication problem to the GitLab API (for fetching
+binary artifacts) not only in CI but also for every developer.&lt;&#x2F;p&gt;
+&lt;p&gt;Maybe I can build sort of a &quot;doctor&quot; script that takes care of ensuring that all
+necessary secrets are set up and that the nix-daemon can access them?&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;devcontainer-gitpod-support&quot;&gt;DevContainer&#x2F;GitPod support&lt;&#x2F;h3&gt;
+&lt;p&gt;What about allowing our developers to dabble with nix tools without even
+installing nix on their computer?&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;code.visualstudio.com&#x2F;docs&#x2F;devcontainers&#x2F;containers&quot;&gt;Devcontainer
+support&lt;&#x2F;a&gt; in Visual
+Code is quite awesome. A lot of our developers use Intellij -- WSL2 remote
+support seems to be better than devcontainer support in my testing, so probably
+not helpful for those users.&lt;&#x2F;p&gt;
+&lt;p&gt;Complementarily, &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;www.gitpod.io&#x2F;&quot;&gt;GitPod&lt;&#x2F;a&gt; would be a super nice test bed that
+could be easily used from our GitLab repositories.&lt;&#x2F;p&gt;
+&lt;p&gt;Authentication within a devcontainer hopefully just works similarly to doing it
+locally outside of the container -- with the right volume mounts. But it might
+be also a big pain!&lt;&#x2F;p&gt;
+&lt;p&gt;For GitPod, it is likely a completely different flow.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;cache-pruning&quot;&gt;Cache Pruning&lt;&#x2F;h3&gt;
+&lt;p&gt;Just expiring files after 30 days or so doesn&#x27;t work with nix since it breaks
+some invariants: All dependencies of a derivation are also assumed to be
+available via the cache (I think).&lt;&#x2F;p&gt;
+&lt;p&gt;Therefore, implementing a nice expiry policy is more involved. E.g. maintaining
+a list of store paths that are still relevant for recent builds and pruning
+everything else.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;a-journey&quot;&gt;A journey...&lt;&#x2F;h2&gt;
+&lt;p&gt;Puuuh... That is quite a journey ahead of me! I believe it can unlock a lot of
+productivity by easy tool distribution in my company but it doesn&#x27;t look that
+easy!&lt;&#x2F;p&gt;
+&lt;p&gt;Thanks for reading until here.&lt;&#x2F;p&gt;
+&lt;p&gt;I am thankful for any pointers to make this smoother. Feel free to get in touch
+with me with the information shared on my GitHub profile:
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&quot;&gt;kolloch&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+</description>
+      </item>
+      <item>
+          <title>ffmpeg: Capture &amp; encode a 4K stream in realtime using VAAPI</title>
+          <pubDate>Wed, 27 May 2020 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/ffmpeg-elgato-camlink-4k/</link>
+          <guid>https://blog.eigenvalue.net/ffmpeg-elgato-camlink-4k/</guid>
+          <description xml:base="https://blog.eigenvalue.net/ffmpeg-elgato-camlink-4k/">&lt;p&gt;I am a wonnabe hobbiest filmmaker. Often, I only noticed problems with the raw
+footage on my Desktop computer at home - long after I could correct them by a
+simple retake. Wouldn&#x27;t it be awesome to record your footage directly to your
+laptop? Make the footage available to others in your team really quickly, maybe
+by storing it on a server?&lt;&#x2F;p&gt;
+&lt;p&gt;I want to do this on my XPS 13 since that is my most portable option. I should
+note that my laptop is decent (Intel i7-8550U 1.8 GHz) but doesn&#x27;t have a
+discrete graphics card. In fact, I cannot even play back the 4K footage recorded
+on my Fuji XT-3 with HEVC (h265) on my laptop without tweaking VLC. And even on
+my hefty AMD Ryzen Threadripper 2950X 16-Core, I cannot encode on the CPU alone
+in realtime.&lt;&#x2F;p&gt;
+&lt;p&gt;Therefore, encoding in realtime should probably be impossible. Or not? I had to
+try. Oh, and on Linux. &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;nixos.org&quot;&gt;NixOS&lt;&#x2F;a&gt; to be specific.&lt;&#x2F;p&gt;
+&lt;p&gt;Note that this article is not full of deep insights but mostly contains things I
+tried and then eventually worked. This kind of content has helped me
+tremendously in the past, so let&#x27;s dump it into the Interwebs.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;the-easy-way-obs&quot;&gt;The easy way: OBS&lt;&#x2F;h2&gt;
+&lt;p&gt;The first thing that I tried was OBS studio. Here is what somewhat worked for me:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;I set the output of my camera to 4K, 16:9, 25 fps (full HD does not work)&lt;&#x2F;li&gt;
+&lt;li&gt;I added a &lt;code&gt;Video Capture (V4L2)&lt;&#x2F;code&gt; source. I needed to set the video format to
+&lt;code&gt;YV12&lt;&#x2F;code&gt; which is apparently an alias for &lt;code&gt;NV12&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;li&gt;I added a &lt;code&gt;Audio Input Capture (Pulse Audio)&lt;&#x2F;code&gt; since the video source does not
+include the audio.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;It somewhat worked. But it randomly stopped working. It dropped frames -- that
+got better when I disabled the preview. Anyways, if you reading this some time
+after I published this, give it a try, it might be the simplest option!&lt;&#x2F;p&gt;
+&lt;p&gt;Therefore, I decided to use CLI tools to
+understand what was going on and to ultimately have more control. I dabbled a
+bit with &lt;code&gt;gstreamer&lt;&#x2F;code&gt; but ultimately chose &lt;code&gt;ffmpeg&lt;&#x2F;code&gt; because I found more and
+better documentation for it and it seemed to work better.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;digging-deeper-required-software&quot;&gt;Digging deeper: Required Software&lt;&#x2F;h2&gt;
+&lt;p&gt;If you want to follow along, I installed these packages in NixOS by adding them
+to my package list:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# Capturing and encoding&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;ffmpeg-full # My version was 4.2.2&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# Inspect video devices etc.&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;v4l-utils&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;usbutils&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# Hardware acceleration for encoding&#x2F;decoding&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;vaapiIntel&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;libva&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;libva-utils&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;&lt;h2 id=&quot;underlying-video-device&quot;&gt;Underlying video device&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;code&gt;ffmpeg&lt;&#x2F;code&gt; and other CLI tools require us to specify the video device name -- at
+least if you have multiple video inputs e.g. the built-in webcam and the Elgato
+Camlink 4K. You can either use the &lt;code&gt;&#x2F;dev&#x2F;videoX&lt;&#x2F;code&gt; device name that you saw in OBS
+Studio or find the device names with:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;v4l2-ctl --list-devices&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Cam Link 4K: Cam Link 4K (usb-0000:39:00.0-1.2):&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;	&#x2F;dev&#x2F;video1&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;	&#x2F;dev&#x2F;video2&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;You can already use the device names (the first one for the Cam Link) that you
+found here. The trouble is that these device names might depend on the order in
+which the video devices are detected. To get a stable device name that works
+across reboots in you shell scripts, you can look into &lt;code&gt;&#x2F;dev&#x2F;v4l&#x2F;by-id&lt;&#x2F;code&gt;
+directory to find a good stable device name. For my devicem it was
+&lt;code&gt;&#x2F;dev&#x2F;v4l&#x2F;by-id&#x2F;usb-Elgato_Cam_Link_4K_0004550EAA000-video-index0&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;We&#x27;ll refer to whatever device you have chosen with &lt;code&gt;V4L_DEVICE&lt;&#x2F;code&gt; later in the
+text.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;playing-the-video-feed&quot;&gt;Playing the video feed&lt;&#x2F;h2&gt;
+&lt;p&gt;To check whether ffmpeg can play the stream, you can use:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;ffplay -f v4l2 -i $V4L_DEVICE&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;That is super simple, isn&#x27;t it? It even detects the video format correctly. If
+it doesn&#x27;t for you, try specifying one with &lt;code&gt;-input_format&lt;&#x2F;code&gt;, e.g. &lt;code&gt;-input_format nv12&lt;&#x2F;code&gt; before the &lt;code&gt;-i&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;capture-the-video-feed&quot;&gt;Capture the video feed&lt;&#x2F;h2&gt;
+&lt;p&gt;What does &lt;code&gt;ffmpeg&lt;&#x2F;code&gt; do by default? Let&#x27;s see by exchanging &lt;code&gt;ffplay&lt;&#x2F;code&gt; with &lt;code&gt;ffmpeg&lt;&#x2F;code&gt;
+and specifying an output file:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;ffmpeg -f v4l2 -i $V4L_DEVICE capture.mkv&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Hey, that works! But only barely.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;I cannot encode the video in real time and the video is buffered. The raw
+video feed with 29.97 fps clocks in at about 3Gb&#x2F;s, a bit less for 25 fps. If
+we can&#x27;t keep up, ffmpeg buffers the rest in main memory. So only suitable for
+quite short videos ;)&lt;&#x2F;li&gt;
+&lt;li&gt;Also, the output is ugly, we need to specify something nicer.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;hardware-encoding-to-the-rescue&quot;&gt;Hardware-encoding to the rescue&lt;&#x2F;h2&gt;
+&lt;p&gt;Since my laptop does not have a discrete graphics card, I am using the &quot;VAAPI&quot;
+standard which is supported by newer Intel CPUs.&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;ffmpeg -vaapi_device &#x2F;dev&#x2F;dri&#x2F;renderD128 \&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  -f v4l2 -input_format nv12 -i $V4L_DEVICE \&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  -vf &amp;#39;hwupload&amp;#39; \&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  -c:v hevc_vaapi -b:v 100M -maxrate:v 120M capture.mkv&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Woooh! That&#x27;s a lot to understand.&lt;&#x2F;p&gt;
+&lt;p&gt;Let&#x27;s start with the basics: A basic ffmpeg command consists of a some global
+flags (&lt;code&gt;-vaapi_device &#x2F;dev&#x2F;dri&#x2F;renderD128&lt;&#x2F;code&gt; in this case) list of inputs (&lt;code&gt;-i ...&lt;&#x2F;code&gt;) and a list of outputs (e.g. file names). Local options effect the next
+input or output, so decoding options are specified before an input, encoding
+options for the output are specified before the output file name. &lt;code&gt;-f v4l2 -input_format nv12&lt;&#x2F;code&gt; apply to the input. &lt;code&gt;-c:v hevc_vaapi -b:v 100M -maxrate:v 120M&lt;&#x2F;code&gt; all apply to the output &lt;code&gt;capture.mkv&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;Between our input and the output, there is a &lt;code&gt;-vf&lt;&#x2F;code&gt; video filter command which
+can be used to process the raw video. You could scale the video, transform the
+color space, things like that. In our case, we need to make the video stream
+available in the hardware encoder with &lt;code&gt;hwupload&lt;&#x2F;code&gt;. That seems to a bit of a
+specialty with the VAAPI support. In my short experimentation with the NVIDIA
+support (&lt;code&gt;nvenc&lt;&#x2F;code&gt;) on another machine, I didn&#x27;t need something similar.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;-c:v hevc_vaapi&lt;&#x2F;code&gt; is used to choose the video codec (&lt;code&gt;-c&lt;&#x2F;code&gt; is for codec, &lt;code&gt;:v&lt;&#x2F;code&gt; is
+for video) from a long list of supported once. The codecs that use VAAPI have
+a &lt;code&gt;_vaapi&lt;&#x2F;code&gt; suffix by convention.&lt;&#x2F;p&gt;
+&lt;p&gt;Without specifying the wanted and maximum bit rate, I got a stream with low
+quality. Therefore, I specified &lt;code&gt;-b:v 100M -maxrate:v 120M&lt;&#x2F;code&gt; to aim at quite high
+quality. The highest quality setting on the X-T3 for 4K 25fps is 400Mbs, so it
+might be even worth to experiment with higher settings. Note that there is a
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;trac.ffmpeg.org&#x2F;ticket&#x2F;7629&quot;&gt;bug&lt;&#x2F;a&gt; that requires you to specify a
+maxrate that is not much higher than the wanted bit rate.&lt;&#x2F;p&gt;
+&lt;p&gt;Using VAAPI, I could encode 25 fps in realtime. Unfortunately, 29.97 is already
+too much. That unfortunately also means that my plan to encode a smaller,
+low-quality stream at the same time, also failed.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;trac.ffmpeg.org&#x2F;wiki&#x2F;Hardware&#x2F;VAAPI&quot;&gt;The FFMPEG VAAPI Wiki
+Page&lt;&#x2F;a&gt; gives context and many useful
+examples if you want to know more.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;audio-source&quot;&gt;Audio source&lt;&#x2F;h2&gt;
+&lt;p&gt;The audio feed is - unfortunately - separate from the video feed.&lt;&#x2F;p&gt;
+&lt;p&gt;First, let me save you a day of fiddling. Don&#x27;t use ALSA directly, use
+PulseAudio directly if you use it on your system. Using ALSA directly from
+ffmpeg resulted in clapping a lot to debug audio sync issues and thus driving my
+girl-friend insane.&lt;&#x2F;p&gt;
+&lt;p&gt;Use &lt;code&gt;pactl list sources&lt;&#x2F;code&gt; to output tons of information about your audio sources.&lt;&#x2F;p&gt;
+&lt;p&gt;Choose the right device and pick the name. For me, it was
+&lt;code&gt;alsa_input.usb-Elgato_Systems_Cam_Link-03.iec958-stereo&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;capture-the-audio-feed&quot;&gt;Capture the audio feed&lt;&#x2F;h2&gt;
+&lt;p&gt;This is straight-forward, we just have to specify that we want to use PulseAudio
+(by &lt;code&gt;-f pulse&lt;&#x2F;code&gt;) and specify the device name as input.&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;ffmpeg -f pulse -i alsa_input.usb-Elgato_Systems_Cam_Link-03.iec958-stereo capture.mp3&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We skip compression to save some CPU when we do everything together later on:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;ffmpeg -f pulse -i alsa_input.usb-Elgato_Systems_Cam_Link-03.iec958-stereo \&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    -c:a copy capture.wav&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;code&gt;-c:a copy&lt;&#x2F;code&gt; set the audio codec to &lt;code&gt;copy&lt;&#x2F;code&gt; which skips any audio encoding. In
+this case, it is redundant since the output format doesn&#x27;t support any special
+codec anyways. It becomes relevant when we combine it with video.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;putting-it-together-doesn-t-work&quot;&gt;Putting it together... doesn&#x27;t work&lt;&#x2F;h2&gt;
+&lt;p&gt;This mostly combines our video&#x2F;audio examples and adds a &lt;code&gt;-thread_queue_size 2048&lt;&#x2F;code&gt; to allow some generous buffering:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;fmpeg -vaapi_device &#x2F;dev&#x2F;dri&#x2F;renderD128 \&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    -i $V4L_DEVICE \&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    -thread_queue_size 2048 -f pulse -i $PULSE_DEVICE \&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    -vf &amp;#39;format=nv12,hwupload&amp;#39; \&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    -c:v hevc_vaapi -b:v 100M -maxrate:v 120M \&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    -acodec copy \&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    output-combined.mkv&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This should be the final section, right? I&#x27;d hope so but for me this wasn&#x27;t true
+at all.&lt;&#x2F;p&gt;
+&lt;p&gt;This might work for you. For me, it also worked once or so. Unfortunately, most
+of the time it will get stuck after two frames. After some random
+experimentation, I noticed that unplugging the device allowed me to record once,
+most of the time. I think that it is due to syncing the audio &#x2F; video stream.
+The video source seems to request key frames doesn&#x27;t get the expected data
+afterwards. Or something else.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;resetting-the-usb-device-without-unplugging&quot;&gt;Resetting the USB device without unplugging&lt;&#x2F;h2&gt;
+&lt;p&gt;That&#x27;s not nice but can we at least automate it? After some browsing, I found
+this recipe on &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;askubuntu.com&#x2F;a&#x2F;61165&quot;&gt;Ask Ubuntu&lt;&#x2F;a&gt;:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;shellscript&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #DCDCAA;&quot;&gt;sudo&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; sh&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; -c&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;echo 0 &amp;gt; &#x2F;sys&#x2F;bus&#x2F;usb&#x2F;devices&#x2F;1-4.6&#x2F;authorized&amp;quot;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #DCDCAA;&quot;&gt;sudo&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; sh&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; -c&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;echo 1 &amp;gt; &#x2F;sys&#x2F;bus&#x2F;usb&#x2F;devices&#x2F;1-4.6&#x2F;authorized&amp;quot;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;I created two shell scripts&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&#x2F;elgato_capture&#x2F;blob&#x2F;d5a023d68c7b25727277b8b15e71e19492cbe545&#x2F;find-elgato4k-sys-dir.sh&quot;&gt;find-elgato4k-sys-dir.sh&lt;&#x2F;a&gt;
+to find the right sys directory and&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&#x2F;elgato_capture&#x2F;blob&#x2F;d5a023d68c7b25727277b8b15e71e19492cbe545&#x2F;reset.sh&quot;&gt;reset.sh&lt;&#x2F;a&gt;
+to issue these commands and wait for the device to come up again.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h2&gt;
+&lt;p&gt;After calling &lt;code&gt;reset.sh&lt;&#x2F;code&gt;, the combined command works reliably for me. And I have
+a new found respect for the codecs in my camera.&lt;&#x2F;p&gt;
+&lt;p&gt;If you benefitted from this article or, even better, improved upon it, please
+let me know, e.g. &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;pkolloch&quot;&gt;on Twitter&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+</description>
+      </item>
+    </channel>
+</rss>

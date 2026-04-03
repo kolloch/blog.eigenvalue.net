@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Peter Kolloch - Blog - fetchurl</title>
+      <link>https://blog.eigenvalue.net</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.eigenvalue.net/tags/fetchurl/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Sun, 10 May 2020 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>Nix: Re-running fixed output derivations - at the right time</title>
+          <pubDate>Sun, 10 May 2020 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/nix-rerunning-fixed-output-derivations/</link>
+          <guid>https://blog.eigenvalue.net/nix-rerunning-fixed-output-derivations/</guid>
+          <description xml:base="https://blog.eigenvalue.net/nix-rerunning-fixed-output-derivations/">&lt;p&gt;If you instantiate this derivation on your local machine, it will fail&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#1&quot;&gt;1&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt;:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    nix repl ‘&amp;lt;nixpkgs&amp;gt;’&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    nix-repl&amp;gt; :b runCommandLocal &amp;quot;myfetch&amp;quot; {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;              	outputHash =  &amp;quot;sha256:04jnq6arig0amz0scadavbzn9bg9k4zphmrm1562n6ygfj1dnj45&amp;quot;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;          	} &amp;#39;&amp;#39;Garbage. This should be a script executable by bash calling curl. It isn’t.&amp;#39;&amp;#39;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        &#x2F;build&#x2F;.attr-0: line 1: Garbage.: command not found&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    [0 built (1 failed)]&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    error: build of &amp;#39;&#x2F;nix&#x2F;store&#x2F;0bn9k5s227v6mb2pvyjdh9rh1rw4l1rm-myfetch.drv&amp;#39; failed&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Reasonably so. Yet, on my machine, Nix contently answers with an output path. Wuuuut?&lt;&#x2F;p&gt;
+&lt;p&gt;For experienced Nixers, this is not a surprise: this happens if you change a
+so-called “Fixed Output Derivation” without updating the hash.&lt;&#x2F;p&gt;
+&lt;p&gt;However, when I first made this mistake, I didn’t know whether I did something
+wrong, had a crucial misunderstanding, or Nix had a bug. I was frustrated. I
+learned that I
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;releases.nixos.org&#x2F;nix-dev&#x2F;2014-September&#x2F;014362.html&quot;&gt;am&lt;&#x2F;a&gt;
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;2270#issuecomment-521471329&quot;&gt;not&lt;&#x2F;a&gt;
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;2270#issuecomment-621541929&quot;&gt;alone&lt;&#x2F;a&gt;.
+Eventually, I understood what had happened and I could appreciate the tough
+implementation choices! Yet, there was this nagging feeling that there had to be
+a better way.&lt;&#x2F;p&gt;
+&lt;p&gt;In this article, I explore your choices as a fellow Nixer to
+verify your Fixed Output Derivations without refetching and rebuilding
+everything all the time.&lt;&#x2F;p&gt;
+&lt;p&gt;NOTE: This article is aimed at Nixers already familiar with writing derivations.
+For an introduction to Nix, see &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;nix-superglue-for-immutable-infrastructure&#x2F;&quot;&gt;Nix: superglue for immutable
+infrastructure&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;fixed-output-derivations&quot;&gt;Fixed Output Derivations&lt;&#x2F;h3&gt;
+&lt;p&gt;Normally, Nix doesn’t allow derivations (= build steps) to access the
+network&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#2&quot;&gt;2&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;If you want network access from a derivation to download some sources, Nix
+requires you to set clear expectations: an output hash. A derivation with such a
+predetermined output hash is called “Fixed Output Derivation” or, abbreviated,
+“FOD”.&lt;&#x2F;p&gt;
+&lt;p&gt;This prevents you from silently introducing randomness into your build. If you
+interact with the network, you interact with the messy world beyond Nix’s
+control. But, at least, Nix can shout and abort the build, when your derivation
+does not produce the expected output.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;enter-caching-substitution&quot;&gt;Enter caching (substitution)&lt;&#x2F;h3&gt;
+&lt;p&gt;We surely do not want to re-download the Internet, again, in every build.&lt;&#x2F;p&gt;
+&lt;p&gt;Therefore, Nix will helpfully cache the result by the name of the derivation and
+the output hash.&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#3&quot;&gt;3&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; You have given Nix a promise: Trust me, whatever command I
+specify, it will result in the given hash. If Nix can ascertain the right
+result, why do all the hard work?&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;preventing-huge-rebuilds&quot;&gt;Preventing huge rebuilds&lt;&#x2F;h3&gt;
+&lt;p&gt;It goes further than that. If we want to re-execute the derivation without
+messing with our Nix store that acts like a cache, we will need to change the
+output path. If we change the output path, all the beautiful derivations and
+process that output further, will need to be rebuilt.&lt;&#x2F;p&gt;
+&lt;p&gt;Ooooh, that can be expensive. E.g. think of GNU libc. All the things we need to
+rebuild with exactly the same code that we happen to store at a different path!&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;back-to-the-problem&quot;&gt;Back to the problem&lt;&#x2F;h3&gt;
+&lt;p&gt;All this very reasonable thinking leads to the problem with which I started this
+article. The commands of the derivations are ignored if we already have a
+matching derivation result!&lt;&#x2F;p&gt;
+&lt;p&gt;In fact, Nixpkgs contains plenty of code that will typically be evaluated but
+not executed&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;because there is still a matching result in the cache. &lt;code&gt;fetchurl&lt;&#x2F;code&gt; etc. are all
+implemented with FODs (Fixed Output Derivations), so that this applies to the
+hypothetical PR in which I change something like:&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    fetchurl&lt;&#x2F;span&gt;&lt;span&gt; {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    	url&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;https:&#x2F;&#x2F;pigeonhole.dovecot.org&#x2F;releases&#x2F;2.3&#x2F;dovecot-2.3-pigeonhole-&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;version&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt;.tar.gz&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    	sha256&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;0pk0579ifl3ymfzn505396bsjlg29ykwr7ag8prcbafayg4rrj28&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;     }&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;To this:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    fetchurl&lt;&#x2F;span&gt;&lt;span&gt; {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    	url&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;https:&#x2F;&#x2F;there.was.never.anything&#x2F;here&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    	sha256&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;0pk0579ifl3ymfzn505396bsjlg29ykwr7ag8prcbafayg4rrj28&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;     }&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;And most likely, the CI job would rubber stamp this lovely PR while a human
+would obviously object.&lt;&#x2F;p&gt;
+&lt;p&gt;Note that we can never ensure perfectly that an URL in a derivation still works
+-- it is outside of our control. But we could ensure that it worked at least
+once. A big difference, in my opinion!&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;rerunning-fods-on-all-input-changes&quot;&gt;Rerunning FODs on all input changes&lt;&#x2F;h3&gt;
+&lt;p&gt;As an experiment, let’s see what is necessary to re-execute FODs (Fixed Output
+Derivations) on any input change.&lt;&#x2F;p&gt;
+&lt;p&gt;FODs are rebuilt when their output hash or their name changes. Therefore, if we
+include a hash over all inputs in the name, we rebuild the FOD on every input
+change. We do this in four simple steps:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;To get Nix to calculate that hash conveniently for us, we “unfix” the given
+FOD and create a normal derivation based on it:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; unfixedDerivation&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    fixedOutputDerivation&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;overrideAttrs&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;attrs&lt;&#x2F;span&gt;&lt;span&gt;: {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;        outputHash&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; null&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;        outputHashAlgo&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; null&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;        outputHashMode&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; null&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    });&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;We grab the output path with the hash:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; outputPath&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; builtins&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;unsafeDiscardStringContext unfixedDerivation&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;outPath&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We are using &lt;code&gt;unsafeDiscardStringContext&lt;&#x2F;code&gt; to make Nix allow us to use the
+string as part of our name. Despite the name, it works in pure&#x2F;strict eval
+mode and is quite harmless, yet unusual.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Extract the hash:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; inputsHash&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; builtins&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;substring&lt;&#x2F;span&gt;&lt;span style=&quot;color: #B5CEA8;&quot;&gt; 11 32&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; outputPath&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;And use it as part of the derivation name:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; name&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;inputsHash&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt;_&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;name&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;You have just created a Fixed Output Derivation that will re-execute whenever
+any of its inputs changes!&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;rebalancing&quot;&gt;Rebalancing&lt;&#x2F;h3&gt;
+&lt;p&gt;For me, rebuilding FODs on every input change, would have been easier to
+understand. For small projects, it is even a reasonable approach. But for medium
+and larger projects, it is simply unacceptable: If we use this technique in
+this extreme form, we will rebuild mostly everything if&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;we update curl,&lt;&#x2F;li&gt;
+&lt;li&gt;we change the mirror list,&lt;&#x2F;li&gt;
+&lt;li&gt;any other input changes of &lt;code&gt;fetchurl&lt;&#x2F;code&gt;!&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;For medium-sized projects I’d recommend another approach:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Use only your original Fixed Output Derivation as a dependency for your real
+build.&lt;&#x2F;li&gt;
+&lt;li&gt;Then, use the instrumented Fixed Output Derivation in your continuous
+integration testing. That will rebuild all the Fixed Output Derivations
+themselves on any input change but it stops there. Nothing that depends on
+them needs to be rebuilt!&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;For huge projects like nixpkgs, further fine-tuning is desirable. For every
+change on &lt;code&gt;fetchurl&lt;&#x2F;code&gt;, you may want to execute a couple of basic tests but you
+may find it unnecessary to re-execute all fetchurls. In addition, you might want
+to execute each fetch at least once every 30 days or so, even without changes,
+so that you ensure the URLs are still meaningful. Elaborating on that
+deserves another article.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;easy-experimentation&quot;&gt;Easy Experimentation&lt;&#x2F;h3&gt;
+&lt;p&gt;I have created a
+“&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&#x2F;nur-packages&#x2F;blob&#x2F;master&#x2F;lib&#x2F;rerun-fixed.nix&quot;&gt;rerunFixed&lt;&#x2F;a&gt;”
+function which can be used like this:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;rerunOnChange&lt;&#x2F;span&gt;&lt;span&gt; {}&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; myFixedOutputDerivation&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;By default, it will rerun the given FOD on every input change as a starting
+point. You can pre-override the attrs before they are used for the hash
+calculation:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;rerunOnChange&lt;&#x2F;span&gt;&lt;span&gt; {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;   	preOverrideAttrs&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; attrs&lt;&#x2F;span&gt;&lt;span&gt;: {&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; irrelevant&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; null&lt;&#x2F;span&gt;&lt;span&gt;; };&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; myFixedOutputDerivation&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Look at the docs to see how you can tune it. And let me know &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;pkolloch&quot;&gt;via
+Twitter&lt;&#x2F;a&gt; if you have questions or suggestions.
+Follow me if you want to see more articles like this.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h3&gt;
+&lt;p&gt;I think that it is worth-while checking that the code of your Fixed Output
+Derivations still work, occasionally. When and how often - that depends heavily
+on the context. I am curious about what you come up with!&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;thanks&quot;&gt;Thanks&lt;&#x2F;h3&gt;
+&lt;p&gt;Special thanks to Andreas Rammhold (&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;andir0815&quot;&gt;@andir0815&lt;&#x2F;a&gt;)
+for experimenting with the idea with me and telling me about
+&lt;code&gt;unsafeDiscardStringContext&lt;&#x2F;code&gt;. In my earlier prototype, I needed to do &quot;Import
+from Derivation&quot; to get rid of the string context!&lt;&#x2F;p&gt;
+&lt;p&gt;Thank you to Florian Klink (&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;flokli&quot;&gt;@flokli&lt;&#x2F;a&gt;) and Andi
+(again!) for giving me valuable feedback on an earlier draft of this article.&lt;&#x2F;p&gt;
+&lt;p&gt;Mistakes are mine.&lt;&#x2F;p&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;1&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;1&lt;&#x2F;sup&gt;
+&lt;p&gt;runCommandLocal is from nixpkgs.&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;2&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;2&lt;&#x2F;sup&gt;
+&lt;p&gt;When running in sandboxed mode. Which you should to get all the beautiful
+properties of Nix.&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;3&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;3&lt;&#x2F;sup&gt;
+&lt;p&gt;To be more exact: Nix will check if the output path of the derivation
+already exists locally or at any of the given remote substituters (like
+cache.nixos.org). The output path, in turn, depends on the name and the
+outputHash.&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+</description>
+      </item>
+    </channel>
+</rss>

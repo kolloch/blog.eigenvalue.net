@@ -113,24 +113,23 @@
 
     <div class="post-content">
       <p>If you instantiate this derivation on your local machine, it will fail<sup class="footnote-reference"><a href="#1">1</a></sup>:</p>
-<pre><code>    nix repl ‘&lt;nixpkgs&gt;’
-
-    nix-repl&gt; :b runCommandLocal &quot;myfetch&quot; {
-              	outputHash =  &quot;sha256:04jnq6arig0amz0scadavbzn9bg9k4zphmrm1562n6ygfj1dnj45&quot;;
-          	} &#x27;&#x27;Garbage. This should be a script executable by bash calling curl. It isn’t.&#x27;&#x27;
-        &#x2F;build&#x2F;.attr-0: line 1: Garbage.: command not found
-    [0 built (1 failed)]
-    error: build of &#x27;&#x2F;nix&#x2F;store&#x2F;0bn9k5s227v6mb2pvyjdh9rh1rw4l1rm-myfetch.drv&#x27; failed
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="plain"><span class="giallo-l"><span>    nix repl ‘&lt;nixpkgs&gt;’</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>    nix-repl&gt; :b runCommandLocal &quot;myfetch&quot; {</span></span>
+<span class="giallo-l"><span>              	outputHash =  &quot;sha256:04jnq6arig0amz0scadavbzn9bg9k4zphmrm1562n6ygfj1dnj45&quot;;</span></span>
+<span class="giallo-l"><span>          	} &#39;&#39;Garbage. This should be a script executable by bash calling curl. It isn’t.&#39;&#39;</span></span>
+<span class="giallo-l"><span>        /build/.attr-0: line 1: Garbage.: command not found</span></span>
+<span class="giallo-l"><span>    [0 built (1 failed)]</span></span>
+<span class="giallo-l"><span>    error: build of &#39;/nix/store/0bn9k5s227v6mb2pvyjdh9rh1rw4l1rm-myfetch.drv&#39; failed</span></span></code></pre>
 <p>Reasonably so. Yet, on my machine, Nix contently answers with an output path. Wuuuut?</p>
 <p>For experienced Nixers, this is not a surprise: this happens if you change a
 so-called “Fixed Output Derivation” without updating the hash.</p>
 <p>However, when I first made this mistake, I didn’t know whether I did something
 wrong, had a crucial misunderstanding, or Nix had a bug. I was frustrated. I
 learned that I
-<a href="https://releases.nixos.org/nix-dev/2014-September/014362.html">am</a>
-<a href="https://github.com/NixOS/nix/issues/2270#issuecomment-521471329">not</a>
-<a href="https://github.com/NixOS/nix/issues/2270#issuecomment-621541929">alone</a>.
+<a rel="external" href="https://releases.nixos.org/nix-dev/2014-September/014362.html">am</a>
+<a rel="external" href="https://github.com/NixOS/nix/issues/2270#issuecomment-521471329">not</a>
+<a rel="external" href="https://github.com/NixOS/nix/issues/2270#issuecomment-621541929">alone</a>.
 Eventually, I understood what had happened and I could appreciate the tough
 implementation choices! Yet, there was this nagging feeling that there had to be
 a better way.</p>
@@ -138,7 +137,7 @@ a better way.</p>
 verify your Fixed Output Derivations without refetching and rebuilding
 everything all the time.</p>
 <p>NOTE: This article is aimed at Nixers already familiar with writing derivations.
-For an introduction to Nix, see <a href="https://blog.eigenvalue.net/nix-superglue-for-immutable-infrastructure/">Nix: superglue for immutable
+For an introduction to Nix, see <a rel="external" href="https://blog.eigenvalue.net/nix-superglue-for-immutable-infrastructure/">Nix: superglue for immutable
 infrastructure</a>.</p>
 <h3 id="fixed-output-derivations">Fixed Output Derivations</h3>
 <p>Normally, Nix doesn’t allow derivations (= build steps) to access the
@@ -175,17 +174,15 @@ not executed</p>
 implemented with FODs (Fixed Output Derivations), so that this applies to the
 hypothetical PR in which I change something like:</li>
 </ul>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">    fetchurl {
-    	url = &quot;https:&#x2F;&#x2F;pigeonhole.dovecot.org&#x2F;releases&#x2F;2.3&#x2F;dovecot-2.3-pigeonhole-${version}.tar.gz&quot;;
-    	sha256 = &quot;0pk0579ifl3ymfzn505396bsjlg29ykwr7ag8prcbafayg4rrj28&quot;;
-     }
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span style="color: #9CDCFE;">    fetchurl</span><span> {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    	url</span><span> =</span><span style="color: #CE9178;"> &quot;https://pigeonhole.dovecot.org/releases/2.3/dovecot-2.3-pigeonhole-</span><span style="color: #569CD6;">${</span><span style="color: #9CDCFE;">version</span><span style="color: #569CD6;">}</span><span style="color: #CE9178;">.tar.gz&quot;</span><span>;</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    	sha256</span><span> =</span><span style="color: #CE9178;"> &quot;0pk0579ifl3ymfzn505396bsjlg29ykwr7ag8prcbafayg4rrj28&quot;</span><span>;</span></span>
+<span class="giallo-l"><span>     }</span></span></code></pre>
 <p>To this:</p>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">    fetchurl {
-    	url = &quot;https:&#x2F;&#x2F;there.was.never.anything&#x2F;here&quot;;
-    	sha256 = &quot;0pk0579ifl3ymfzn505396bsjlg29ykwr7ag8prcbafayg4rrj28&quot;;
-     }
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span style="color: #9CDCFE;">    fetchurl</span><span> {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    	url</span><span> =</span><span style="color: #CE9178;"> &quot;https://there.was.never.anything/here&quot;</span><span>;</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    	sha256</span><span> =</span><span style="color: #CE9178;"> &quot;0pk0579ifl3ymfzn505396bsjlg29ykwr7ag8prcbafayg4rrj28&quot;</span><span>;</span></span>
+<span class="giallo-l"><span>     }</span></span></code></pre>
 <p>And most likely, the CI job would rubber stamp this lovely PR while a human
 would obviously object.</p>
 <p>Note that we can never ensure perfectly that an URL in a derivation still works
@@ -201,32 +198,25 @@ change. We do this in four simple steps:</p>
 <li>
 <p>To get Nix to calculate that hash conveniently for us, we “unfix” the given
 FOD and create a normal derivation based on it:</p>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">let unfixedDerivation =
-    fixedOutputDerivation.overrideAttrs(attrs: {
-        outputHash = null;
-        outputHashAlgo = null;
-        outputHashMode = null;
-    });
-</code></pre>
-</li>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span style="color: #569CD6;">let</span><span style="color: #9CDCFE;"> unfixedDerivation</span><span> =</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    fixedOutputDerivation</span><span>.</span><span style="color: #9CDCFE;">overrideAttrs</span><span>(</span><span style="color: #9CDCFE;">attrs</span><span>: {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">        outputHash</span><span> =</span><span style="color: #569CD6;"> null</span><span>;</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">        outputHashAlgo</span><span> =</span><span style="color: #569CD6;"> null</span><span>;</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">        outputHashMode</span><span> =</span><span style="color: #569CD6;"> null</span><span>;</span></span>
+<span class="giallo-l"><span>    });</span></span></code></pre></li>
 <li>
 <p>We grab the output path with the hash:</p>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">let outputPath = builtins.unsafeDiscardStringContext unfixedDerivation.outPath;
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span style="color: #569CD6;">let</span><span style="color: #9CDCFE;"> outputPath</span><span> =</span><span style="color: #569CD6;"> builtins</span><span>.</span><span style="color: #9CDCFE;">unsafeDiscardStringContext unfixedDerivation</span><span>.</span><span style="color: #9CDCFE;">outPath</span><span>;</span></span></code></pre>
 <p>We are using <code>unsafeDiscardStringContext</code> to make Nix allow us to use the
 string as part of our name. Despite the name, it works in pure/strict eval
 mode and is quite harmless, yet unusual.</p>
 </li>
 <li>
 <p>Extract the hash:</p>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">let inputsHash = builtins.substring 11 32 outputPath;
-</code></pre>
-</li>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span style="color: #569CD6;">let</span><span style="color: #9CDCFE;"> inputsHash</span><span> =</span><span style="color: #569CD6;"> builtins</span><span>.</span><span style="color: #9CDCFE;">substring</span><span style="color: #B5CEA8;"> 11 32</span><span style="color: #9CDCFE;"> outputPath</span><span>;</span></span></code></pre></li>
 <li>
 <p>And use it as part of the derivation name:</p>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">let name = &quot;${inputsHash}_${name}&quot;;
-</code></pre>
-</li>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span style="color: #569CD6;">let</span><span style="color: #9CDCFE;"> name</span><span> =</span><span style="color: #CE9178;"> &quot;</span><span style="color: #569CD6;">${</span><span style="color: #9CDCFE;">inputsHash</span><span style="color: #569CD6;">}</span><span style="color: #CE9178;">_</span><span style="color: #569CD6;">${</span><span style="color: #9CDCFE;">name</span><span style="color: #569CD6;">}</span><span style="color: #CE9178;">&quot;</span><span>;</span></span></code></pre></li>
 </ol>
 <p>You have just created a Fixed Output Derivation that will re-execute whenever
 any of its inputs changes!</p>
@@ -257,18 +247,16 @@ so that you ensure the URLs are still meaningful. Elaborating on that
 deserves another article.</p>
 <h3 id="easy-experimentation">Easy Experimentation</h3>
 <p>I have created a
-“<a href="https://github.com/kolloch/nur-packages/blob/master/lib/rerun-fixed.nix">rerunFixed</a>”
+“<a rel="external" href="https://github.com/kolloch/nur-packages/blob/master/lib/rerun-fixed.nix">rerunFixed</a>”
 function which can be used like this:</p>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">rerunOnChange {} myFixedOutputDerivation
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span style="color: #9CDCFE;">rerunOnChange</span><span> {}</span><span style="color: #9CDCFE;"> myFixedOutputDerivation</span></span></code></pre>
 <p>By default, it will rerun the given FOD on every input change as a starting
 point. You can pre-override the attrs before they are used for the hash
 calculation:</p>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">rerunOnChange {
-   	preOverrideAttrs = attrs: { irrelevant = null; };
-} myFixedOutputDerivation
-</code></pre>
-<p>Look at the docs to see how you can tune it. And let me know <a href="https://twitter.com/pkolloch">via
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span style="color: #9CDCFE;">rerunOnChange</span><span> {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">   	preOverrideAttrs</span><span> =</span><span style="color: #9CDCFE;"> attrs</span><span>: {</span><span style="color: #9CDCFE;"> irrelevant</span><span> =</span><span style="color: #569CD6;"> null</span><span>; };</span></span>
+<span class="giallo-l"><span>}</span><span style="color: #9CDCFE;"> myFixedOutputDerivation</span></span></code></pre>
+<p>Look at the docs to see how you can tune it. And let me know <a rel="external" href="https://twitter.com/pkolloch">via
 Twitter</a> if you have questions or suggestions.
 Follow me if you want to see more articles like this.</p>
 <h3 id="conclusion">Conclusion</h3>
@@ -276,11 +264,11 @@ Follow me if you want to see more articles like this.</p>
 Derivations still work, occasionally. When and how often - that depends heavily
 on the context. I am curious about what you come up with!</p>
 <h3 id="thanks">Thanks</h3>
-<p>Special thanks to Andreas Rammhold (<a href="https://twitter.com/andir0815">@andir0815</a>)
+<p>Special thanks to Andreas Rammhold (<a rel="external" href="https://twitter.com/andir0815">@andir0815</a>)
 for experimenting with the idea with me and telling me about
-<code>unsafeDiscardStringContext</code>. In my earlier prototype, I needed to do &quot;Import
-from Derivation&quot; to get rid of the string context!</p>
-<p>Thank you to Florian Klink (<a href="https://twitter.com/flokli">@flokli</a>) and Andi
+<code>unsafeDiscardStringContext</code>. In my earlier prototype, I needed to do "Import
+from Derivation" to get rid of the string context!</p>
+<p>Thank you to Florian Klink (<a rel="external" href="https://twitter.com/flokli">@flokli</a>) and Andi
 (again!) for giving me valuable feedback on an earlier draft of this article.</p>
 <p>Mistakes are mine.</p>
 <div class="footnote-definition" id="1"><sup class="footnote-definition-label">1</sup>

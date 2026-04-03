@@ -112,64 +112,61 @@
     </header>
 
     <div class="post-content">
-      <p>I love <a href="https://github.com/nlewo/nix2container">nix2container</a>! It allows you to
+      <p>I love <a rel="external" href="https://github.com/nlewo/nix2container">nix2container</a>! It allows you to
 build docker containers with nix, declaratively, and it even avoids writing
 large archive files to the disk.</p>
 <p>However, there are some pitfalls when using it. Especially, when using it as I do:
 spelling out the contents of your layers explicitly.</p>
 <h2 id="straight-forward-image-with-explicit-layering">Straight-forward image with explicit layering</h2>
 <p>Here is a container with <code>bash</code> and <code>zsh</code> included:</p>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">{ #...
-  layered = nix2container.buildImage {
-    name = &quot;layered&quot;;
-    layers =
-      let layerDefs = [
-        {
-          deps = with nixpkgs; [ readline ];
-        }
-        {
-          deps = with nixpkgs; [ bashInteractive ];
-        }
-        {
-          deps = with nixpkgs; [ zsh ];
-        }
-      ];
-      in builtins.map nix2container.buildLayer layerDefs;
-    config = {
-      Env = [
-        (let path = with nixpkgs; lib.makeBinPath [ bashInteractive zsh ];
-        in &quot;PATH=${path}&quot;)
-      ];
-    };
-  };
-}
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span>{</span><span style="color: #6A9955;"> #...</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">  layered</span><span> =</span><span style="color: #9CDCFE;"> nix2container</span><span>.</span><span style="color: #9CDCFE;">buildImage</span><span> {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    name</span><span> =</span><span style="color: #CE9178;"> &quot;layered&quot;</span><span>;</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    layers</span><span> =</span></span>
+<span class="giallo-l"><span style="color: #569CD6;">      let</span><span style="color: #9CDCFE;"> layerDefs</span><span> = [</span></span>
+<span class="giallo-l"><span>        {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">          deps</span><span> =</span><span style="color: #569CD6;"> with</span><span style="color: #9CDCFE;"> nixpkgs</span><span>; [</span><span style="color: #9CDCFE;"> readline</span><span> ];</span></span>
+<span class="giallo-l"><span>        }</span></span>
+<span class="giallo-l"><span>        {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">          deps</span><span> =</span><span style="color: #569CD6;"> with</span><span style="color: #9CDCFE;"> nixpkgs</span><span>; [</span><span style="color: #9CDCFE;"> bashInteractive</span><span> ];</span></span>
+<span class="giallo-l"><span>        }</span></span>
+<span class="giallo-l"><span>        {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">          deps</span><span> =</span><span style="color: #569CD6;"> with</span><span style="color: #9CDCFE;"> nixpkgs</span><span>; [</span><span style="color: #9CDCFE;"> zsh</span><span> ];</span></span>
+<span class="giallo-l"><span>        }</span></span>
+<span class="giallo-l"><span>      ];</span></span>
+<span class="giallo-l"><span style="color: #569CD6;">      in builtins</span><span>.</span><span style="color: #DCDCAA;">map</span><span style="color: #9CDCFE;"> nix2container</span><span>.</span><span style="color: #9CDCFE;">buildLayer layerDefs</span><span>;</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    config</span><span> = {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">      Env</span><span> = [</span></span>
+<span class="giallo-l"><span>        (</span><span style="color: #569CD6;">let</span><span style="color: #9CDCFE;"> path</span><span> =</span><span style="color: #569CD6;"> with</span><span style="color: #9CDCFE;"> nixpkgs</span><span>;</span><span style="color: #9CDCFE;"> lib</span><span>.</span><span style="color: #9CDCFE;">makeBinPath</span><span> [</span><span style="color: #9CDCFE;"> bashInteractive zsh</span><span> ];</span></span>
+<span class="giallo-l"><span style="color: #569CD6;">        in</span><span style="color: #CE9178;"> &quot;PATH=</span><span style="color: #569CD6;">${</span><span style="color: #9CDCFE;">path</span><span style="color: #569CD6;">}</span><span style="color: #CE9178;">&quot;</span><span>)</span></span>
+<span class="giallo-l"><span>      ];</span></span>
+<span class="giallo-l"><span>    };</span></span>
+<span class="giallo-l"><span>  };</span></span>
+<span class="giallo-l"><span>}</span></span></code></pre>
 <p>I love this! So straight-forward! Close to the on-disk format. I feel like
 having control without the fuzz.</p>
 <p>And it works:</p>
-<pre data-lang="plain" class="language-plain "><code class="language-plain" data-lang="plain">❯ docker run -it layered bash
-bash-5.2#
-exit
-❯ docker run -it layered zsh
-34c7a50b621e#
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="plain"><span class="giallo-l"><span>❯ docker run -it layered bash</span></span>
+<span class="giallo-l"><span>bash-5.2#</span></span>
+<span class="giallo-l"><span>exit</span></span>
+<span class="giallo-l"><span>❯ docker run -it layered zsh</span></span>
+<span class="giallo-l"><span>34c7a50b621e#</span></span></code></pre>
 <p>How efficient is that image? Does it contain duplicate files? Let's ask
-<a href="https://github.com/wagoodman/dive">dive</a>:</p>
-<pre data-lang="plain" class="language-plain "><code class="language-plain" data-lang="plain">❯ dive --ci layered
-  Using default CI config
-Image Source: docker:&#x2F;&#x2F;layered
-Fetching image... (this can take a while for large images)
-Analyzing image...
-  efficiency: 40.9436 %
-  wastedBytes: 142845873 bytes (143 MB)
-  userWastedPercent: 126.2491 %
-Inefficient Files:
-Count  Wasted Space  File Path
-    3         14 MB  &#x2F;nix&#x2F;store&#x2F;c0hkzndf6i162jymxmlirn9l6ypv7p3c-glibc-2.38-23&#x2F;share&#x2F;i18n&#x2F;locales&#x2F;cns11643_stroke
-    3         10 MB  &#x2F;nix&#x2F;store&#x2F;c0hkzndf6i162jymxmlirn9l6ypv7p3c-glibc-2.38-23&#x2F;share&#x2F;i18n&#x2F;locales&#x2F;iso14651_t1_common
-    3        6.1 MB  &#x2F;nix&#x2F;store&#x2F;c0hkzndf6i162jymxmlirn9l6ypv7p3c-glibc-2.38-23&#x2F;lib&#x2F;libc.so.6
-[...]
-</code></pre>
+<a rel="external" href="https://github.com/wagoodman/dive">dive</a>:</p>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="plain"><span class="giallo-l"><span>❯ dive --ci layered</span></span>
+<span class="giallo-l"><span>  Using default CI config</span></span>
+<span class="giallo-l"><span>Image Source: docker://layered</span></span>
+<span class="giallo-l"><span>Fetching image... (this can take a while for large images)</span></span>
+<span class="giallo-l"><span>Analyzing image...</span></span>
+<span class="giallo-l"><span>  efficiency: 40.9436 %</span></span>
+<span class="giallo-l"><span>  wastedBytes: 142845873 bytes (143 MB)</span></span>
+<span class="giallo-l"><span>  userWastedPercent: 126.2491 %</span></span>
+<span class="giallo-l"><span>Inefficient Files:</span></span>
+<span class="giallo-l"><span>Count  Wasted Space  File Path</span></span>
+<span class="giallo-l"><span>    3         14 MB  /nix/store/c0hkzndf6i162jymxmlirn9l6ypv7p3c-glibc-2.38-23/share/i18n/locales/cns11643_stroke</span></span>
+<span class="giallo-l"><span>    3         10 MB  /nix/store/c0hkzndf6i162jymxmlirn9l6ypv7p3c-glibc-2.38-23/share/i18n/locales/iso14651_t1_common</span></span>
+<span class="giallo-l"><span>    3        6.1 MB  /nix/store/c0hkzndf6i162jymxmlirn9l6ypv7p3c-glibc-2.38-23/lib/libc.so.6</span></span>
+<span class="giallo-l"><span>[...]</span></span></code></pre>
 <p>Oh. That is not so great. What happened here?</p>
 <p><code>bashInteractive</code> and <code>zsh</code> share some dependencies. I already tried to factor
 out <code>readline</code> which also uses <code>glibc</code>. But still, <code>nix2container</code> repeats all
@@ -180,111 +177,107 @@ store paths, even if present in earlier layers.</p>
 <h2 id="deduplicating-common-dependencies-manually">Deduplicating common dependencies (manually)</h2>
 <p>How do we make a layer aware of previous layers? We use the <code>layers</code> attribute
 of <code>buildLayer</code>:</p>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">{ #...
-  layeredDeduplicated = nix2container.buildImage {
-    name = &quot;layered&quot;;
-    layers =
-      let
-        commonLayer = {
-          deps = with nixpkgs; [ readline ];
-        };
-      layerDefs = [
-        {
-          deps = with nixpkgs; [ bashInteractive ];
-          layers = [ (nix2container.buildLayer commonLayer) ];
-        }
-        {
-          deps = with nixpkgs; [ zsh ];
-          layers = [ (nix2container.buildLayer commonLayer) ];
-        }
-      ];
-      in builtins.map nix2container.buildLayer layerDefs;
-    config = {
-      Env = [
-        (let path = with nixpkgs; lib.makeBinPath [ bashInteractive zsh ];
-        in &quot;PATH=${path}&quot;)
-      ];
-    };
-  };
-}
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span>{</span><span style="color: #6A9955;"> #...</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">  layeredDeduplicated</span><span> =</span><span style="color: #9CDCFE;"> nix2container</span><span>.</span><span style="color: #9CDCFE;">buildImage</span><span> {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    name</span><span> =</span><span style="color: #CE9178;"> &quot;layered&quot;</span><span>;</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    layers</span><span> =</span></span>
+<span class="giallo-l"><span style="color: #569CD6;">      let</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">        commonLayer</span><span> = {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">          deps</span><span> =</span><span style="color: #569CD6;"> with</span><span style="color: #9CDCFE;"> nixpkgs</span><span>; [</span><span style="color: #9CDCFE;"> readline</span><span> ];</span></span>
+<span class="giallo-l"><span>        };</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">      layerDefs</span><span> = [</span></span>
+<span class="giallo-l"><span>        {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">          deps</span><span> =</span><span style="color: #569CD6;"> with</span><span style="color: #9CDCFE;"> nixpkgs</span><span>; [</span><span style="color: #9CDCFE;"> bashInteractive</span><span> ];</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">          layers</span><span> = [ (</span><span style="color: #9CDCFE;">nix2container</span><span>.</span><span style="color: #9CDCFE;">buildLayer commonLayer</span><span>) ];</span></span>
+<span class="giallo-l"><span>        }</span></span>
+<span class="giallo-l"><span>        {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">          deps</span><span> =</span><span style="color: #569CD6;"> with</span><span style="color: #9CDCFE;"> nixpkgs</span><span>; [</span><span style="color: #9CDCFE;"> zsh</span><span> ];</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">          layers</span><span> = [ (</span><span style="color: #9CDCFE;">nix2container</span><span>.</span><span style="color: #9CDCFE;">buildLayer commonLayer</span><span>) ];</span></span>
+<span class="giallo-l"><span>        }</span></span>
+<span class="giallo-l"><span>      ];</span></span>
+<span class="giallo-l"><span style="color: #569CD6;">      in builtins</span><span>.</span><span style="color: #DCDCAA;">map</span><span style="color: #9CDCFE;"> nix2container</span><span>.</span><span style="color: #9CDCFE;">buildLayer layerDefs</span><span>;</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    config</span><span> = {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">      Env</span><span> = [</span></span>
+<span class="giallo-l"><span>        (</span><span style="color: #569CD6;">let</span><span style="color: #9CDCFE;"> path</span><span> =</span><span style="color: #569CD6;"> with</span><span style="color: #9CDCFE;"> nixpkgs</span><span>;</span><span style="color: #9CDCFE;"> lib</span><span>.</span><span style="color: #9CDCFE;">makeBinPath</span><span> [</span><span style="color: #9CDCFE;"> bashInteractive zsh</span><span> ];</span></span>
+<span class="giallo-l"><span style="color: #569CD6;">        in</span><span style="color: #CE9178;"> &quot;PATH=</span><span style="color: #569CD6;">${</span><span style="color: #9CDCFE;">path</span><span style="color: #569CD6;">}</span><span style="color: #CE9178;">&quot;</span><span>)</span></span>
+<span class="giallo-l"><span>      ];</span></span>
+<span class="giallo-l"><span>    };</span></span>
+<span class="giallo-l"><span>  };</span></span>
+<span class="giallo-l"><span>}</span></span></code></pre>
 <p>Let's have a look at dive's opinion on this:</p>
-<pre data-lang="plain" class="language-plain "><code class="language-plain" data-lang="plain">Image Source: docker:&#x2F;&#x2F;layered
-Fetching image... (this can take a while for large images)
-Analyzing image...
-  efficiency: 100.0000 %
-  wastedBytes: 0 bytes (0 B)
-  userWastedPercent: 0.0000 %
-Inefficient Files:
-Count  Wasted Space  File Path
-None
-Results:
-  PASS: highestUserWastedPercent
-  SKIP: highestWastedBytes: rule disabled
-  PASS: lowestEfficiency
-Result:PASS [Total:3] [Passed:2] [Failed:0] [Warn:0] [Skipped:1]
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="plain"><span class="giallo-l"><span>Image Source: docker://layered</span></span>
+<span class="giallo-l"><span>Fetching image... (this can take a while for large images)</span></span>
+<span class="giallo-l"><span>Analyzing image...</span></span>
+<span class="giallo-l"><span>  efficiency: 100.0000 %</span></span>
+<span class="giallo-l"><span>  wastedBytes: 0 bytes (0 B)</span></span>
+<span class="giallo-l"><span>  userWastedPercent: 0.0000 %</span></span>
+<span class="giallo-l"><span>Inefficient Files:</span></span>
+<span class="giallo-l"><span>Count  Wasted Space  File Path</span></span>
+<span class="giallo-l"><span>None</span></span>
+<span class="giallo-l"><span>Results:</span></span>
+<span class="giallo-l"><span>  PASS: highestUserWastedPercent</span></span>
+<span class="giallo-l"><span>  SKIP: highestWastedBytes: rule disabled</span></span>
+<span class="giallo-l"><span>  PASS: lowestEfficiency</span></span>
+<span class="giallo-l"><span>Result:PASS [Total:3] [Passed:2] [Failed:0] [Warn:0] [Skipped:1]</span></span></code></pre>
 <p>Dive is super happy! Nice!</p>
 <h2 id="deduplication-automatic">Deduplication (automatic)</h2>
 <p>Wouldn't it be nice if later layers always skipped all store paths already
 contained in earlier layers?</p>
 <p>This being nix, this is easy to generalize:</p>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">{ # ...
-  # Nest all layers so that prior layers are dependencies of later layers.
-  # This way, we should avoid redundant dependencies.
-  foldImageLayers = let
-    mergeToLayer = priorLayers: component:
-      assert builtins.isList priorLayers;
-      assert builtins.isAttrs component; let
-        layer = nix2container.buildLayer (component
-          &#x2F;&#x2F; {
-            layers = priorLayers;
-          });
-      in
-        priorLayers ++ [layer];
-  in
-    layers: lib.foldl mergeToLayer [] layers;
-}
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span>{</span><span style="color: #6A9955;"> # ...</span></span>
+<span class="giallo-l"><span style="color: #6A9955;">  # Nest all layers so that prior layers are dependencies of later layers.</span></span>
+<span class="giallo-l"><span style="color: #6A9955;">  # This way, we should avoid redundant dependencies.</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">  foldImageLayers</span><span> =</span><span style="color: #569CD6;"> let</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    mergeToLayer</span><span> =</span><span style="color: #9CDCFE;"> priorLayers</span><span>:</span><span style="color: #9CDCFE;"> component</span><span>:</span></span>
+<span class="giallo-l"><span style="color: #569CD6;">      assert builtins</span><span>.</span><span style="color: #9CDCFE;">isList priorLayers</span><span>;</span></span>
+<span class="giallo-l"><span style="color: #569CD6;">      assert builtins</span><span>.</span><span style="color: #9CDCFE;">isAttrs component</span><span>;</span><span style="color: #569CD6;"> let</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">        layer</span><span> =</span><span style="color: #9CDCFE;"> nix2container</span><span>.</span><span style="color: #9CDCFE;">buildLayer</span><span> (</span><span style="color: #9CDCFE;">component</span></span>
+<span class="giallo-l"><span>          // {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">            layers</span><span> =</span><span style="color: #9CDCFE;"> priorLayers</span><span>;</span></span>
+<span class="giallo-l"><span>          });</span></span>
+<span class="giallo-l"><span style="color: #569CD6;">      in</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">        priorLayers</span><span> ++ [</span><span style="color: #9CDCFE;">layer</span><span>];</span></span>
+<span class="giallo-l"><span style="color: #569CD6;">  in</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    layers</span><span>:</span><span style="color: #9CDCFE;"> lib</span><span>.</span><span style="color: #9CDCFE;">foldl mergeToLayer</span><span> []</span><span style="color: #9CDCFE;"> layers</span><span>;</span></span>
+<span class="giallo-l"><span>}</span></span></code></pre>
 <p>Each layer will reference all prior layers in the <code>layers</code> attribute. This might
 be problematic with a large number of layers -- but hasn't been problematic so
 far for me. I am sure one can optimize it.</p>
 <p>Putting <code>foldImageLayers</code> to good use:</p>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">{ # ...
-  layeredDeduplicatedAutomatic = nix2container.buildImage {
-    name = &quot;layeredAutomatic&quot;;
-    layers = 
-      let layerDefs = [
-        { deps = with nixpkgs; [ readline ]; }
-        { deps = with nixpkgs; [ bashInteractive ]; }
-        { deps = with nixpkgs; [ zsh ]; }
-      ];
-      in foldImageLayers layerDefs;
-    config = {
-      Env = [
-        (let path = with nixpkgs; lib.makeBinPath [ bashInteractive zsh ];
-        in &quot;PATH=${path}&quot;)
-      ];
-    };
-  };
-}
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span>{</span><span style="color: #6A9955;"> # ...</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">  layeredDeduplicatedAutomatic</span><span> =</span><span style="color: #9CDCFE;"> nix2container</span><span>.</span><span style="color: #9CDCFE;">buildImage</span><span> {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    name</span><span> =</span><span style="color: #CE9178;"> &quot;layeredAutomatic&quot;</span><span>;</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    layers</span><span> = </span></span>
+<span class="giallo-l"><span style="color: #569CD6;">      let</span><span style="color: #9CDCFE;"> layerDefs</span><span> = [</span></span>
+<span class="giallo-l"><span>        {</span><span style="color: #9CDCFE;"> deps</span><span> =</span><span style="color: #569CD6;"> with</span><span style="color: #9CDCFE;"> nixpkgs</span><span>; [</span><span style="color: #9CDCFE;"> readline</span><span> ]; }</span></span>
+<span class="giallo-l"><span>        {</span><span style="color: #9CDCFE;"> deps</span><span> =</span><span style="color: #569CD6;"> with</span><span style="color: #9CDCFE;"> nixpkgs</span><span>; [</span><span style="color: #9CDCFE;"> bashInteractive</span><span> ]; }</span></span>
+<span class="giallo-l"><span>        {</span><span style="color: #9CDCFE;"> deps</span><span> =</span><span style="color: #569CD6;"> with</span><span style="color: #9CDCFE;"> nixpkgs</span><span>; [</span><span style="color: #9CDCFE;"> zsh</span><span> ]; }</span></span>
+<span class="giallo-l"><span>      ];</span></span>
+<span class="giallo-l"><span style="color: #569CD6;">      in</span><span style="color: #9CDCFE;"> foldImageLayers layerDefs</span><span>;</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    config</span><span> = {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">      Env</span><span> = [</span></span>
+<span class="giallo-l"><span>        (</span><span style="color: #569CD6;">let</span><span style="color: #9CDCFE;"> path</span><span> =</span><span style="color: #569CD6;"> with</span><span style="color: #9CDCFE;"> nixpkgs</span><span>;</span><span style="color: #9CDCFE;"> lib</span><span>.</span><span style="color: #9CDCFE;">makeBinPath</span><span> [</span><span style="color: #9CDCFE;"> bashInteractive zsh</span><span> ];</span></span>
+<span class="giallo-l"><span style="color: #569CD6;">        in</span><span style="color: #CE9178;"> &quot;PATH=</span><span style="color: #569CD6;">${</span><span style="color: #9CDCFE;">path</span><span style="color: #569CD6;">}</span><span style="color: #CE9178;">&quot;</span><span>)</span></span>
+<span class="giallo-l"><span>      ];</span></span>
+<span class="giallo-l"><span>    };</span></span>
+<span class="giallo-l"><span>  };</span></span>
+<span class="giallo-l"><span>}</span></span></code></pre>
 <p>This results again in a docker image without any redundant store paths! Dive is
 happy and so are we: We explicitly define the contents of each layer but
 automatically exclude all duplicate store paths!</p>
 <h2 id="the-end">The end</h2>
 <p>Note that <code>nix2container</code> supports layering your dependencies automatically
 using the algorithm described
-<a href="https://grahamc.com/blog/nix-and-layered-docker-images/">here</a>. Check out the
+<a rel="external" href="https://grahamc.com/blog/nix-and-layered-docker-images/">here</a>. Check out the
 <code>maxLayers</code> setting.</p>
 <p>I like to have more control but maybe fully automatic is the best? I'm curious
 to hear your thoughts on the automatic vs. manual control in Docker container
 optimization. What has been your approach?</p>
 <p>Feel free to get in touch with me with the information shared on my GitHub
-profile: <a href="https://github.com/kolloch">kolloch</a></p>
+profile: <a rel="external" href="https://github.com/kolloch">kolloch</a></p>
 <h2 id="references">References</h2>
 <p>I am for sure not the first one that stumbled upon this. Initially, the
-discussion issue <a href="https://github.com/nlewo/nix2container/issues/41">#41</a> of
+discussion issue <a rel="external" href="https://github.com/nlewo/nix2container/issues/41">#41</a> of
 nix2container pointed me into the right direction!</p>
 
     </div>

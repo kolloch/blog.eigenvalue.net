@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Peter Kolloch - Blog - devshell</title>
+      <link>https://blog.eigenvalue.net</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.eigenvalue.net/tags/devshell/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Sat, 06 Jan 2024 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>Tutorial: Using flake-parts to set up a nodejs devshell</title>
+          <pubDate>Sat, 06 Jan 2024 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/2024-flake-parts-nodejs-devshell/</link>
+          <guid>https://blog.eigenvalue.net/2024-flake-parts-nodejs-devshell/</guid>
+          <description xml:base="https://blog.eigenvalue.net/2024-flake-parts-nodejs-devshell/">&lt;p&gt;Do you want setup a reproducible nodejs version for your project? And you
+want to use nix to execute npm&#x2F;nodejs directly on your OS (Linux&#x2F;MacOS&#x2F;WSL2)
+-- rather than a heavy-weight &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;containers.dev&#x2F;&quot;&gt;devcontainer&lt;&#x2F;a&gt; using Docker?&lt;&#x2F;p&gt;
+&lt;p&gt;It is not difficult per-se but it took a while for me to assemble all the bits
+and pieces. Let&#x27;s make it easier for you!&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;requirements&quot;&gt;Requirements&lt;&#x2F;h2&gt;
+&lt;ol&gt;
+&lt;li&gt;flake-enabled &lt;code&gt;nix&lt;&#x2F;code&gt; - copy the installation shell script from &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;DeterminateSystems&#x2F;nix-installer&#x2F;blob&#x2F;main&#x2F;README.md&quot;&gt;nix-installer&lt;&#x2F;a&gt; if you haven&#x27;t installed it
+already.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;direnv.net&#x2F;&quot;&gt;&lt;code&gt;direnv&lt;&#x2F;code&gt;&lt;&#x2F;a&gt; - if you haven&#x27;t installed it already:
+&lt;ol&gt;
+&lt;li&gt;Use the &lt;code&gt;direnv&lt;&#x2F;code&gt; package from nixpkgs, e.g. with &lt;code&gt;nix profile install nixpkgs#direnv&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;li&gt;Add &lt;code&gt;eval &quot;$(direnv hook bash)&quot;&lt;&#x2F;code&gt; to your &lt;code&gt;.bashrc&lt;&#x2F;code&gt; or &lt;code&gt;eval &quot;$(direnv hook bash)&quot;&lt;&#x2F;code&gt;
+to your &lt;code&gt;.zshrc&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;I assume an existing git repository. If not at hand, create a new directory and
+execute &lt;code&gt;git init&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;h2 id=&quot;setup-flake-nix-with-flake-parts&quot;&gt;Setup flake.nix with flake-parts&lt;&#x2F;h2&gt;
+&lt;p&gt;The example code uses &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;flake.parts&#x2F;&quot;&gt;flake.parts&lt;&#x2F;a&gt;. You can start with
+this flake.nix template:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;# flake.nix &amp;quot;flake&amp;quot; &amp;quot;imports&amp;quot;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;{&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;  inputs&lt;&#x2F;span&gt;&lt;span&gt; = {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;url&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;nixpkgs&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    flake-parts&lt;&#x2F;span&gt;&lt;span&gt; = {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;      url&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;github:hercules-ci&#x2F;flake-parts&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;      inputs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;nixpkgs-lib&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;follows&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;nixpkgs&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    };&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;    # Development&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    devshell&lt;&#x2F;span&gt;&lt;span&gt; = {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;      url&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;github:numtide&#x2F;devshell&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;      inputs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;follows&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;nixpkgs&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    };&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  };&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;  outputs&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; inputs&lt;&#x2F;span&gt;&lt;span&gt;@{&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; self&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; flake-parts&lt;&#x2F;span&gt;&lt;span&gt;,&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; devshell&lt;&#x2F;span&gt;&lt;span&gt; }:&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; flake-parts&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;mkFlake&lt;&#x2F;span&gt;&lt;span&gt; {&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; inherit&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; inputs&lt;&#x2F;span&gt;&lt;span&gt;; } {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    systems&lt;&#x2F;span&gt;&lt;span&gt; = [&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;x86_64-linux&amp;quot; &amp;quot;aarch64-linux&amp;quot; &amp;quot;aarch64-darwin&amp;quot; &amp;quot;x86_64-darwin&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt; ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    imports&lt;&#x2F;span&gt;&lt;span&gt; = [];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    flake&lt;&#x2F;span&gt;&lt;span&gt; = {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;      # your existing definitions before using flake-parts...&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    };&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  };&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;If you need to quick&amp;amp;dirty migrate a few existing flake attributes,
+you can stuff them into &quot;flake&quot; and refactor later.&lt;&#x2F;p&gt;
+&lt;p&gt;Quickly check if you made any error:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;shellsession&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;$ git add flake.nix&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;$ nix flake check&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;warning: Git tree &amp;#39;&#x2F;Users&#x2F;...&#x2F;projects&#x2F;astro-starlight-with-nix&amp;#39; is dirty&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;warning: The check omitted these incompatible systems: aarch64-linux, x86_64-darwin, x86_64-linux&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Use &amp;#39;--all-systems&amp;#39; to check all.&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;You can ignore the warnings but you need to fix any errors.&lt;&#x2F;p&gt;
+&lt;p&gt;If you look at &lt;code&gt;git status&lt;&#x2F;code&gt;, yet another file appeared: &lt;code&gt;flake.lock&lt;&#x2F;code&gt; That&#x27;s
+good, it contains the exact versions of our dependencies. It should
+be committed with the rest.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;choose-nodejs-version&quot;&gt;Choose nodejs version&lt;&#x2F;h2&gt;
+&lt;p&gt;Alright. For astro&#x2F;starlight, we are going to need &lt;code&gt;nodejs&lt;&#x2F;code&gt; with &lt;code&gt;npm&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;Let&#x27;s chose a nodejs version and put it into the exported
+packages of the flake. That way we can already test run it
+and refer to it from other config files:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;# flake-modules&#x2F;nodejs-packages.nix&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;{&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;  perSystem&lt;&#x2F;span&gt;&lt;span&gt; = {&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; pkgs&lt;&#x2F;span&gt;&lt;span&gt;, ... }: {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    packages&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;nodejs&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; pkgs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;nodejs_21&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  };&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Now add this file to the imports in &lt;code&gt;flake.nix&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;# flake.nix&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;# ...&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;  imports&lt;&#x2F;span&gt;&lt;span style=&quot;color: #F44747;&quot;&gt; =&lt;&#x2F;span&gt;&lt;span&gt; [&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt;    .&#x2F;flake-modules&#x2F;nodejs-packages.nix&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  ]&lt;&#x2F;span&gt;&lt;span style=&quot;color: #F44747;&quot;&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;# ...&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Add the file to git and execute &lt;code&gt;nix flake check&lt;&#x2F;code&gt; to notice any errors.&lt;&#x2F;p&gt;
+&lt;p&gt;We can also test the nodejs version that we chose:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;shellsession&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;❯ nix run .#nodejs&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;warning: Git tree &amp;#39;&#x2F;Users&#x2F;...&#x2F;projects&#x2F;astro-starlight-with-nix&amp;#39; is dirty&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Welcome to Node.js v21.5.0.&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Type &amp;quot;.help&amp;quot; for more information.&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;&lt;h2 id=&quot;setup-devshell&quot;&gt;Setup devshell&lt;&#x2F;h2&gt;
+&lt;p&gt;This is not so convenient... yet.&lt;&#x2F;p&gt;
+&lt;p&gt;Let&#x27;s make sure that we and our contributors all use the same version!&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;# flake-modules&#x2F;nodejs-devshell.nix&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;{&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; inputs&lt;&#x2F;span&gt;&lt;span&gt;, ...}: {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;  imports&lt;&#x2F;span&gt;&lt;span&gt; = [&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    inputs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;devshell&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;flakeModule&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;  perSystem&lt;&#x2F;span&gt;&lt;span&gt; = {&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; config&lt;&#x2F;span&gt;&lt;span&gt;, ... }: {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    devshells&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;default&lt;&#x2F;span&gt;&lt;span&gt; = {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;      commands&lt;&#x2F;span&gt;&lt;span&gt; = [&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        {&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; package&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; config&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;packages&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;nodejs&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; category&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;docs&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;; }&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;      ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    };&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  };&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Notice the &lt;code&gt;config.packages.nodejs&lt;&#x2F;code&gt;? Here we are referring
+to the nodejs package definition that we setup before.&lt;&#x2F;p&gt;
+&lt;p&gt;Now add this file to the imports in &lt;code&gt;flake.nix&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# flake.nix&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# ...&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    imports = [&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;      .&#x2F;flake-modules&#x2F;nodejs-packages.nix&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;      .&#x2F;flake-modules&#x2F;nodejs-devshell.nix&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# ...&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;And now add the new file to git and run &lt;code&gt;nix flake check&lt;&#x2F;code&gt;.
+Noticing a pattern? Well, get used to it ;)&lt;&#x2F;p&gt;
+&lt;p&gt;Now we can enter a devshell with &lt;code&gt;node&lt;&#x2F;code&gt; and &lt;code&gt;npm&lt;&#x2F;code&gt; provided
+by nix:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;shellsession&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;❯ nix develop&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;warning: Git tree &amp;#39;&#x2F;Users&#x2F;...&#x2F;projects&#x2F;astro-starlight-with-nix&amp;#39; is dirty&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;🔨 Welcome to devshell&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[[general commands]]&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  menu   - prints this menu&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[docs]&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  nodejs - Event-driven I&#x2F;O framework for the V8 JavaScript engine&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[devshell]$ which npm&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;&#x2F;nix&#x2F;store&#x2F;3h53w5zkwpyapp8510d6ivmhmf47x0bs-devshell-dir&#x2F;bin&#x2F;npm&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[devshell]$ which node&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;&#x2F;nix&#x2F;store&#x2F;3h53w5zkwpyapp8510d6ivmhmf47x0bs-devshell-dir&#x2F;bin&#x2F;node&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[devshell]$&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;exit&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;You can exit the shell on Unix-like OSes with CTRL+D or by typing &quot;exit&quot;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;adding-an-envrc-for-direnv&quot;&gt;Adding an .envrc for direnv&lt;&#x2F;h2&gt;
+&lt;p&gt;All this entering and exiting. Here come direnv to automate that step for us!&lt;&#x2F;p&gt;
+&lt;p&gt;Create a new file:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;shellscript&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;# .envrc&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;#!&#x2F;usr&#x2F;bin&#x2F;env bash&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;# ^ make editor happy&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;#&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;# Use https:&#x2F;&#x2F;direnv.net&#x2F; to automatically load the dev shell.&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;#&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;# Update this by looking at https:&#x2F;&#x2F;github.com&#x2F;nix-community&#x2F;nix-direnv#installation&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;# under &amp;quot;Direnv source&amp;quot;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #C586C0;&quot;&gt;if&lt;&#x2F;span&gt;&lt;span&gt; !&lt;&#x2F;span&gt;&lt;span style=&quot;color: #DCDCAA;&quot;&gt; has&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; nix_direnv_version&lt;&#x2F;span&gt;&lt;span&gt; || !&lt;&#x2F;span&gt;&lt;span style=&quot;color: #DCDCAA;&quot;&gt; nix_direnv_version&lt;&#x2F;span&gt;&lt;span style=&quot;color: #B5CEA8;&quot;&gt; 3.0.4&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;span style=&quot;color: #C586C0;&quot;&gt; then&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #DCDCAA;&quot;&gt;  source_url&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;https:&#x2F;&#x2F;raw.githubusercontent.com&#x2F;nix-community&#x2F;nix-direnv&#x2F;3.0.4&#x2F;direnvrc&amp;quot; &amp;quot;sha256-DzlYZ33mWF&#x2F;Gs8DDeyjr8mnVmQGx7ASYqA5WlxwvBG4=&amp;quot;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #C586C0;&quot;&gt;fi&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #DCDCAA;&quot;&gt;watch_file&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; --&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; flake-modules&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;*&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt;.nix&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #DCDCAA;&quot;&gt;use&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; flake .&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; --show-trace&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;If you press enter on the shell prompt now and you have &lt;code&gt;direnv&lt;&#x2F;code&gt; set up
+properly, you should get something like:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;shellsession&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;direnv: error &#x2F;Users&#x2F;...&#x2F;projects&#x2F;astro-starlight-with-nix&#x2F;.envrc is blocked. Run `direnv allow` to approve its content&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Well, we&#x27;ll do as we are told:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;shellsession&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;❯ direnv allow &lt;&#x2F;span&gt;&lt;span style=&quot;color: #DCDCAA;&quot;&gt;.&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;direnv: loading ~&#x2F;projects&#x2F;astro-starlight-with-nix&#x2F;.envrc&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;direnv: loading https:&#x2F;&#x2F;raw.githubusercontent.com&#x2F;nix-community&#x2F;nix-direnv&#x2F;3.0.4&#x2F;direnvrc (sha256-DzlYZ33mWF&#x2F;Gs8DDeyjr8mnVmQGx7ASYqA5WlxwvBG4=)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;direnv: using flake . --show-trace&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;direnv: nix-direnv: using cached dev shell&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;🔨 Welcome to devshell&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[[general commands]]&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  menu   - prints this menu&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[docs]&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  nodejs - Event-driven I&#x2F;O framework for the V8 JavaScript engine&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;direnv: export +DEVSHELL_DIR +IN_NIX_SHELL +NIXPKGS_PATH +PRJ_DATA_DIR +PRJ_ROOT +name ~PATH ~XDG_DATA_DIRS&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Awesome! Now we have &lt;code&gt;npm&lt;&#x2F;code&gt; and &lt;code&gt;nodejs&lt;&#x2F;code&gt; with the chosen version in our PATH
+whenever we are in this directory.&lt;&#x2F;p&gt;
+&lt;p&gt;It also creates a &lt;code&gt;.direnv&lt;&#x2F;code&gt; folder that you probably want to add to your &lt;code&gt;.gitignore&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;shellscript&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #DCDCAA;&quot;&gt;echo&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;.direnv&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt; &amp;gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt;.gitignore&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;&lt;h2 id=&quot;checking-your-flake-with-nix-repl&quot;&gt;Checking your flake with &lt;code&gt;nix repl&lt;&#x2F;code&gt;&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;code&gt;nix repl&lt;&#x2F;code&gt; would deserve its own blog article or book but to get your started:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;❯ nix repl&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Welcome to Nix 2.18.1. Type :? for help.&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;nix-repl&amp;gt; :lf .&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;warning: Git tree &amp;#39;&#x2F;Users&#x2F;peterkolloch&#x2F;projects&#x2F;astro-starlight-with-nix&amp;#39; is dirty&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Added 20 variables.&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;code&gt;:lf .&lt;&#x2F;code&gt; stands for &quot;load flake&quot; and has to be followed by a path. Here,
+the current directory.&lt;&#x2F;p&gt;
+&lt;p&gt;Now the &lt;code&gt;outputs&lt;&#x2F;code&gt; of the flake are discoverable in the &lt;code&gt;outputs&lt;&#x2F;code&gt; attribute
+in the shell. You can use tab completion (i.e. hit TAB after &lt;code&gt;outputs.&lt;&#x2F;code&gt;):&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;shellsession&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;nix-repl&amp;gt; outputs.&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;outputs.apps                 outputs.checks               outputs.devShells            outputs.formatter            outputs.legacyPackages       outputs.nixosConfigurations  outputs.nixosModules         outputs.overlays             outputs.packages&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;nix-repl&amp;gt; outputs.devShells&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;outputs.devShells&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;nix-repl&amp;gt; outputs.devShells.&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;outputs.devShells.aarch64-darwin  outputs.devShells.aarch64-linux   outputs.devShells.x86_64-darwin   outputs.devShells.x86_64-linux&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;nix-repl&amp;gt; outputs.devShells.aarch64-darwin.default&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;You see that there are attributes for each &lt;code&gt;system&lt;&#x2F;code&gt; (architecture) that
+we defined our flake for.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;updating-all-dependencies&quot;&gt;Updating all dependencies&lt;&#x2F;h2&gt;
+&lt;p&gt;If you want to use a &lt;code&gt;nodejs&lt;&#x2F;code&gt; version from a more recent nixpkgs later,
+you&#x27;ll have to update your flake dependencies. That is as easy as:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;shellscript&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #DCDCAA;&quot;&gt;nix&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; flake update&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;&lt;h2 id=&quot;vscode-support&quot;&gt;VSCode support&lt;&#x2F;h2&gt;
+&lt;p&gt;Did you know that you can actually force VSCode and some other IDEs to use
+exactly the same nodejs version for builds that you specified?&lt;&#x2F;p&gt;
+&lt;p&gt;For VSCode you can use the &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;marketplace.visualstudio.com&#x2F;items?itemName=Rubymaniac.vscode-direnv&quot;&gt;direnv&lt;&#x2F;a&gt; plugin. There are a couple of them. This
+is the one that I use currently.&lt;&#x2F;p&gt;
+&lt;p&gt;To help fellow VSCode users find the extension quickly, you can add the following
+file to the project:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;json&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;&#x2F;&#x2F; .vscode&#x2F;extensions.json&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;{&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    &amp;quot;recommendations&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: [&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt;        &amp;quot;rubymaniac.vscode-direnv&amp;quot;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    ]&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h2&gt;
+&lt;p&gt;Now we have set up a very simple dev shell with a pinned nodejs version
+that is convenient to use. That is a big help to onboard anyone onto the project.&lt;&#x2F;p&gt;
+&lt;p&gt;We did it step-by step by adding little tiny &lt;code&gt;flake-module.nix&lt;&#x2F;code&gt; files to our flake.
+This was convenient for this tutorial but actually also works well in practice.
+If you scope one &lt;code&gt;flake-module.nix&lt;&#x2F;code&gt; to one purpose, it remains easy to understand.&lt;&#x2F;p&gt;
+&lt;p&gt;A good basis - let&#x27;s soon add more on top! For example,
+a documentation site built with the astro framework:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a href=&quot;..&#x2F;2024_astro_starlight_with_nix&quot;&gt;Tutorial: Building our Astro Starlight page with Nix &amp;amp; flake.parts&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Feel free to give me feedback&#x2F;ask questions at &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;discourse.nixos.org&#x2F;t&#x2F;tutorial-using-flake-parts-to-set-up-a-nodejs-devshell&#x2F;37940&quot;&gt;discourse&lt;&#x2F;a&gt; or in a
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&#x2F;blog.eigenvalue.net&#x2F;issues&quot;&gt;GitHub issue&lt;&#x2F;a&gt;. I want
+to hear your thoughts so feel free to err on the side of commenting too much.&lt;&#x2F;p&gt;
+</description>
+      </item>
+    </channel>
+</rss>

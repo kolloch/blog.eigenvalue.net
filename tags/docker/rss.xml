@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Peter Kolloch - Blog - docker</title>
+      <link>https://blog.eigenvalue.net</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.eigenvalue.net/tags/docker/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Sun, 12 Nov 2023 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>Nix &amp; Docker: Layer explicitly without duplicate packages!</title>
+          <pubDate>Sun, 12 Nov 2023 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/2023-nix2container-everything-once/</link>
+          <guid>https://blog.eigenvalue.net/2023-nix2container-everything-once/</guid>
+          <description xml:base="https://blog.eigenvalue.net/2023-nix2container-everything-once/">&lt;p&gt;I love &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;nlewo&#x2F;nix2container&quot;&gt;nix2container&lt;&#x2F;a&gt;! It allows you to
+build docker containers with nix, declaratively, and it even avoids writing
+large archive files to the disk.&lt;&#x2F;p&gt;
+&lt;p&gt;However, there are some pitfalls when using it. Especially, when using it as I do:
+spelling out the contents of your layers explicitly.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;straight-forward-image-with-explicit-layering&quot;&gt;Straight-forward image with explicit layering&lt;&#x2F;h2&gt;
+&lt;p&gt;Here is a container with &lt;code&gt;bash&lt;&#x2F;code&gt; and &lt;code&gt;zsh&lt;&#x2F;code&gt; included:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;{&lt;&#x2F;span&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt; #...&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;  layered&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nix2container&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;buildImage&lt;&#x2F;span&gt;&lt;span&gt; {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    name&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;layered&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    layers&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;      let&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; layerDefs&lt;&#x2F;span&gt;&lt;span&gt; = [&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;          deps&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; with&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;; [&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; readline&lt;&#x2F;span&gt;&lt;span&gt; ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        }&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;          deps&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; with&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;; [&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; bashInteractive&lt;&#x2F;span&gt;&lt;span&gt; ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        }&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;          deps&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; with&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;; [&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; zsh&lt;&#x2F;span&gt;&lt;span&gt; ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        }&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;      ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;      in builtins&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #DCDCAA;&quot;&gt;map&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nix2container&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;buildLayer layerDefs&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    config&lt;&#x2F;span&gt;&lt;span&gt; = {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;      Env&lt;&#x2F;span&gt;&lt;span&gt; = [&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        (&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; path&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; with&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; lib&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;makeBinPath&lt;&#x2F;span&gt;&lt;span&gt; [&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; bashInteractive zsh&lt;&#x2F;span&gt;&lt;span&gt; ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;        in&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;PATH=&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;path&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;      ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    };&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  };&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;I love this! So straight-forward! Close to the on-disk format. I feel like
+having control without the fuzz.&lt;&#x2F;p&gt;
+&lt;p&gt;And it works:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;❯ docker run -it layered bash&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;bash-5.2#&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;exit&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;❯ docker run -it layered zsh&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;34c7a50b621e#&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;How efficient is that image? Does it contain duplicate files? Let&#x27;s ask
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;wagoodman&#x2F;dive&quot;&gt;dive&lt;&#x2F;a&gt;:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;❯ dive --ci layered&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  Using default CI config&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Image Source: docker:&#x2F;&#x2F;layered&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Fetching image... (this can take a while for large images)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Analyzing image...&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  efficiency: 40.9436 %&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  wastedBytes: 142845873 bytes (143 MB)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  userWastedPercent: 126.2491 %&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Inefficient Files:&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Count  Wasted Space  File Path&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    3         14 MB  &#x2F;nix&#x2F;store&#x2F;c0hkzndf6i162jymxmlirn9l6ypv7p3c-glibc-2.38-23&#x2F;share&#x2F;i18n&#x2F;locales&#x2F;cns11643_stroke&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    3         10 MB  &#x2F;nix&#x2F;store&#x2F;c0hkzndf6i162jymxmlirn9l6ypv7p3c-glibc-2.38-23&#x2F;share&#x2F;i18n&#x2F;locales&#x2F;iso14651_t1_common&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    3        6.1 MB  &#x2F;nix&#x2F;store&#x2F;c0hkzndf6i162jymxmlirn9l6ypv7p3c-glibc-2.38-23&#x2F;lib&#x2F;libc.so.6&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[...]&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Oh. That is not so great. What happened here?&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;bashInteractive&lt;&#x2F;code&gt; and &lt;code&gt;zsh&lt;&#x2F;code&gt; share some dependencies. I already tried to factor
+out &lt;code&gt;readline&lt;&#x2F;code&gt; which also uses &lt;code&gt;glibc&lt;&#x2F;code&gt;. But still, &lt;code&gt;nix2container&lt;&#x2F;code&gt; repeats all
+store paths, even if present in earlier layers.&lt;&#x2F;p&gt;
+&lt;p&gt;Why is that?&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;nix2container.buildLayer&lt;&#x2F;code&gt; builds each layer independently,
+&lt;code&gt;nix2container.buildImage&lt;&#x2F;code&gt; assembles them in one image.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;deduplicating-common-dependencies-manually&quot;&gt;Deduplicating common dependencies (manually)&lt;&#x2F;h2&gt;
+&lt;p&gt;How do we make a layer aware of previous layers? We use the &lt;code&gt;layers&lt;&#x2F;code&gt; attribute
+of &lt;code&gt;buildLayer&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;{&lt;&#x2F;span&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt; #...&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;  layeredDeduplicated&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nix2container&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;buildImage&lt;&#x2F;span&gt;&lt;span&gt; {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    name&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;layered&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    layers&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;      let&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;        commonLayer&lt;&#x2F;span&gt;&lt;span&gt; = {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;          deps&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; with&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;; [&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; readline&lt;&#x2F;span&gt;&lt;span&gt; ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        };&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;      layerDefs&lt;&#x2F;span&gt;&lt;span&gt; = [&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;          deps&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; with&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;; [&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; bashInteractive&lt;&#x2F;span&gt;&lt;span&gt; ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;          layers&lt;&#x2F;span&gt;&lt;span&gt; = [ (&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;nix2container&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;buildLayer commonLayer&lt;&#x2F;span&gt;&lt;span&gt;) ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        }&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;          deps&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; with&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;; [&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; zsh&lt;&#x2F;span&gt;&lt;span&gt; ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;          layers&lt;&#x2F;span&gt;&lt;span&gt; = [ (&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;nix2container&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;buildLayer commonLayer&lt;&#x2F;span&gt;&lt;span&gt;) ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        }&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;      ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;      in builtins&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #DCDCAA;&quot;&gt;map&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nix2container&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;buildLayer layerDefs&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    config&lt;&#x2F;span&gt;&lt;span&gt; = {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;      Env&lt;&#x2F;span&gt;&lt;span&gt; = [&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        (&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; path&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; with&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; lib&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;makeBinPath&lt;&#x2F;span&gt;&lt;span&gt; [&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; bashInteractive zsh&lt;&#x2F;span&gt;&lt;span&gt; ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;        in&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;PATH=&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;path&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;      ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    };&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  };&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Let&#x27;s have a look at dive&#x27;s opinion on this:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Image Source: docker:&#x2F;&#x2F;layered&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Fetching image... (this can take a while for large images)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Analyzing image...&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  efficiency: 100.0000 %&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  wastedBytes: 0 bytes (0 B)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  userWastedPercent: 0.0000 %&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Inefficient Files:&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Count  Wasted Space  File Path&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;None&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Results:&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  PASS: highestUserWastedPercent&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  SKIP: highestWastedBytes: rule disabled&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  PASS: lowestEfficiency&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Result:PASS [Total:3] [Passed:2] [Failed:0] [Warn:0] [Skipped:1]&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Dive is super happy! Nice!&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;deduplication-automatic&quot;&gt;Deduplication (automatic)&lt;&#x2F;h2&gt;
+&lt;p&gt;Wouldn&#x27;t it be nice if later layers always skipped all store paths already
+contained in earlier layers?&lt;&#x2F;p&gt;
+&lt;p&gt;This being nix, this is easy to generalize:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;{&lt;&#x2F;span&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt; # ...&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;  # Nest all layers so that prior layers are dependencies of later layers.&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt;  # This way, we should avoid redundant dependencies.&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;  foldImageLayers&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; let&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    mergeToLayer&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; priorLayers&lt;&#x2F;span&gt;&lt;span&gt;:&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; component&lt;&#x2F;span&gt;&lt;span&gt;:&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;      assert builtins&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;isList priorLayers&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;      assert builtins&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;isAttrs component&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; let&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;        layer&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nix2container&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;buildLayer&lt;&#x2F;span&gt;&lt;span&gt; (&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;component&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;          &#x2F;&#x2F; {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;            layers&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; priorLayers&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;          });&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;      in&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;        priorLayers&lt;&#x2F;span&gt;&lt;span&gt; ++ [&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;layer&lt;&#x2F;span&gt;&lt;span&gt;];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;  in&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    layers&lt;&#x2F;span&gt;&lt;span&gt;:&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; lib&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;foldl mergeToLayer&lt;&#x2F;span&gt;&lt;span&gt; []&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; layers&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Each layer will reference all prior layers in the &lt;code&gt;layers&lt;&#x2F;code&gt; attribute. This might
+be problematic with a large number of layers -- but hasn&#x27;t been problematic so
+far for me. I am sure one can optimize it.&lt;&#x2F;p&gt;
+&lt;p&gt;Putting &lt;code&gt;foldImageLayers&lt;&#x2F;code&gt; to good use:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;{&lt;&#x2F;span&gt;&lt;span style=&quot;color: #6A9955;&quot;&gt; # ...&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;  layeredDeduplicatedAutomatic&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nix2container&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;buildImage&lt;&#x2F;span&gt;&lt;span&gt; {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    name&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;layeredAutomatic&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    layers&lt;&#x2F;span&gt;&lt;span&gt; = &lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;      let&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; layerDefs&lt;&#x2F;span&gt;&lt;span&gt; = [&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        {&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; deps&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; with&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;; [&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; readline&lt;&#x2F;span&gt;&lt;span&gt; ]; }&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        {&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; deps&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; with&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;; [&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; bashInteractive&lt;&#x2F;span&gt;&lt;span&gt; ]; }&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        {&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; deps&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; with&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;; [&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; zsh&lt;&#x2F;span&gt;&lt;span&gt; ]; }&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;      ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;      in&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; foldImageLayers layerDefs&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    config&lt;&#x2F;span&gt;&lt;span&gt; = {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;      Env&lt;&#x2F;span&gt;&lt;span&gt; = [&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        (&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; path&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; with&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; lib&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;makeBinPath&lt;&#x2F;span&gt;&lt;span&gt; [&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; bashInteractive zsh&lt;&#x2F;span&gt;&lt;span&gt; ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;        in&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;PATH=&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;path&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;      ];&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    };&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;  };&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This results again in a docker image without any redundant store paths! Dive is
+happy and so are we: We explicitly define the contents of each layer but
+automatically exclude all duplicate store paths!&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;the-end&quot;&gt;The end&lt;&#x2F;h2&gt;
+&lt;p&gt;Note that &lt;code&gt;nix2container&lt;&#x2F;code&gt; supports layering your dependencies automatically
+using the algorithm described
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;grahamc.com&#x2F;blog&#x2F;nix-and-layered-docker-images&#x2F;&quot;&gt;here&lt;&#x2F;a&gt;. Check out the
+&lt;code&gt;maxLayers&lt;&#x2F;code&gt; setting.&lt;&#x2F;p&gt;
+&lt;p&gt;I like to have more control but maybe fully automatic is the best? I&#x27;m curious
+to hear your thoughts on the automatic vs. manual control in Docker container
+optimization. What has been your approach?&lt;&#x2F;p&gt;
+&lt;p&gt;Feel free to get in touch with me with the information shared on my GitHub
+profile: &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&quot;&gt;kolloch&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;references&quot;&gt;References&lt;&#x2F;h2&gt;
+&lt;p&gt;I am for sure not the first one that stumbled upon this. Initially, the
+discussion issue &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;nlewo&#x2F;nix2container&#x2F;issues&#x2F;41&quot;&gt;#41&lt;&#x2F;a&gt; of
+nix2container pointed me into the right direction!&lt;&#x2F;p&gt;
+</description>
+      </item>
+    </channel>
+</rss>

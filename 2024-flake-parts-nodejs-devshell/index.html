@@ -114,17 +114,17 @@
     <div class="post-content">
       <p>Do you want setup a reproducible nodejs version for your project? And you
 want to use nix to execute npm/nodejs directly on your OS (Linux/MacOS/WSL2)
--- rather than a heavy-weight <a href="https://containers.dev/">devcontainer</a> using Docker?</p>
+-- rather than a heavy-weight <a rel="external" href="https://containers.dev/">devcontainer</a> using Docker?</p>
 <p>It is not difficult per-se but it took a while for me to assemble all the bits
 and pieces. Let's make it easier for you!</p>
 <h2 id="requirements">Requirements</h2>
 <ol>
-<li>flake-enabled <code>nix</code> - copy the installation shell script from <a href="https://github.com/DeterminateSystems/nix-installer/blob/main/README.md">nix-installer</a> if you haven't installed it
+<li>flake-enabled <code>nix</code> - copy the installation shell script from <a rel="external" href="https://github.com/DeterminateSystems/nix-installer/blob/main/README.md">nix-installer</a> if you haven't installed it
 already.</li>
-<li><a href="https://direnv.net/"><code>direnv</code></a> - if you haven't installed it already:
+<li><a rel="external" href="https://direnv.net/"><code>direnv</code></a> - if you haven't installed it already:
 <ol>
 <li>Use the <code>direnv</code> package from nixpkgs, e.g. with <code>nix profile install nixpkgs#direnv</code>.</li>
-<li>Add <code>eval &quot;$(direnv hook bash)&quot;</code> to your <code>.bashrc</code> or <code>eval &quot;$(direnv hook bash)&quot;</code>
+<li>Add <code>eval "$(direnv hook bash)"</code> to your <code>.bashrc</code> or <code>eval "$(direnv hook bash)"</code>
 to your <code>.zshrc</code>.</li>
 </ol>
 </li>
@@ -132,46 +132,44 @@ to your <code>.zshrc</code>.</li>
 execute <code>git init</code>.</li>
 </ol>
 <h2 id="setup-flake-nix-with-flake-parts">Setup flake.nix with flake-parts</h2>
-<p>The example code uses <a href="https://flake.parts/">flake.parts</a>. You can start with
+<p>The example code uses <a rel="external" href="https://flake.parts/">flake.parts</a>. You can start with
 this flake.nix template:</p>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix"># flake.nix &quot;flake&quot; &quot;imports&quot;
-{
-  inputs = {
-    nixpkgs.url = &quot;nixpkgs&quot;;
-
-    flake-parts = {
-      url = &quot;github:hercules-ci&#x2F;flake-parts&quot;;
-      inputs.nixpkgs-lib.follows = &quot;nixpkgs&quot;;
-    };
-
-    # Development
-
-    devshell = {
-      url = &quot;github:numtide&#x2F;devshell&quot;;
-      inputs.nixpkgs.follows = &quot;nixpkgs&quot;;
-    };
-  };
-  
-  outputs = inputs@{ self, nixpkgs, flake-parts, devshell }: flake-parts.lib.mkFlake { inherit inputs; } {
-    systems = [ &quot;x86_64-linux&quot; &quot;aarch64-linux&quot; &quot;aarch64-darwin&quot; &quot;x86_64-darwin&quot; ];
-
-    imports = [];
-
-    flake = {
-      # your existing definitions before using flake-parts...
-    };
-  };
-}
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span style="color: #6A9955;"># flake.nix &quot;flake&quot; &quot;imports&quot;</span></span>
+<span class="giallo-l"><span>{</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">  inputs</span><span> = {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    nixpkgs</span><span>.</span><span style="color: #9CDCFE;">url</span><span> =</span><span style="color: #CE9178;"> &quot;nixpkgs&quot;</span><span>;</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    flake-parts</span><span> = {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">      url</span><span> =</span><span style="color: #CE9178;"> &quot;github:hercules-ci/flake-parts&quot;</span><span>;</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">      inputs</span><span>.</span><span style="color: #9CDCFE;">nixpkgs-lib</span><span>.</span><span style="color: #9CDCFE;">follows</span><span> =</span><span style="color: #CE9178;"> &quot;nixpkgs&quot;</span><span>;</span></span>
+<span class="giallo-l"><span>    };</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A9955;">    # Development</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    devshell</span><span> = {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">      url</span><span> =</span><span style="color: #CE9178;"> &quot;github:numtide/devshell&quot;</span><span>;</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">      inputs</span><span>.</span><span style="color: #9CDCFE;">nixpkgs</span><span>.</span><span style="color: #9CDCFE;">follows</span><span> =</span><span style="color: #CE9178;"> &quot;nixpkgs&quot;</span><span>;</span></span>
+<span class="giallo-l"><span>    };</span></span>
+<span class="giallo-l"><span>  };</span></span>
+<span class="giallo-l"><span>  </span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">  outputs</span><span> =</span><span style="color: #9CDCFE;"> inputs</span><span>@{</span><span style="color: #9CDCFE;"> self</span><span>,</span><span style="color: #9CDCFE;"> nixpkgs</span><span>,</span><span style="color: #9CDCFE;"> flake-parts</span><span>,</span><span style="color: #9CDCFE;"> devshell</span><span> }:</span><span style="color: #9CDCFE;"> flake-parts</span><span>.</span><span style="color: #9CDCFE;">lib</span><span>.</span><span style="color: #9CDCFE;">mkFlake</span><span> {</span><span style="color: #569CD6;"> inherit</span><span style="color: #9CDCFE;"> inputs</span><span>; } {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    systems</span><span> = [</span><span style="color: #CE9178;"> &quot;x86_64-linux&quot; &quot;aarch64-linux&quot; &quot;aarch64-darwin&quot; &quot;x86_64-darwin&quot;</span><span> ];</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    imports</span><span> = [];</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    flake</span><span> = {</span></span>
+<span class="giallo-l"><span style="color: #6A9955;">      # your existing definitions before using flake-parts...</span></span>
+<span class="giallo-l"><span>    };</span></span>
+<span class="giallo-l"><span>  };</span></span>
+<span class="giallo-l"><span>}</span></span></code></pre>
 <p>If you need to quick&amp;dirty migrate a few existing flake attributes,
-you can stuff them into &quot;flake&quot; and refactor later.</p>
+you can stuff them into "flake" and refactor later.</p>
 <p>Quickly check if you made any error:</p>
-<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">$ git add flake.nix
-$ nix flake check
-warning: Git tree &#x27;&#x2F;Users&#x2F;...&#x2F;projects&#x2F;astro-starlight-with-nix&#x27; is dirty
-warning: The check omitted these incompatible systems: aarch64-linux, x86_64-darwin, x86_64-linux
-Use &#x27;--all-systems&#x27; to check all.
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="shellsession"><span class="giallo-l"><span>$ git add flake.nix</span></span>
+<span class="giallo-l"><span>$ nix flake check</span></span>
+<span class="giallo-l"><span>warning: Git tree &#39;/Users/.../projects/astro-starlight-with-nix&#39; is dirty</span></span>
+<span class="giallo-l"><span>warning: The check omitted these incompatible systems: aarch64-linux, x86_64-darwin, x86_64-linux</span></span>
+<span class="giallo-l"><span>Use &#39;--all-systems&#39; to check all.</span></span></code></pre>
 <p>You can ignore the warnings but you need to fix any errors.</p>
 <p>If you look at <code>git status</code>, yet another file appeared: <code>flake.lock</code> That's
 good, it contains the exact versions of our dependencies. It should
@@ -181,171 +179,153 @@ be committed with the rest.</p>
 <p>Let's chose a nodejs version and put it into the exported
 packages of the flake. That way we can already test run it
 and refer to it from other config files:</p>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix"># flake-modules&#x2F;nodejs-packages.nix
-{
-  perSystem = { pkgs, ... }: {
-    packages.nodejs = pkgs.nodejs_21;
-  };
-}
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span style="color: #6A9955;"># flake-modules/nodejs-packages.nix</span></span>
+<span class="giallo-l"><span>{</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">  perSystem</span><span> = {</span><span style="color: #9CDCFE;"> pkgs</span><span>, ... }: {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    packages</span><span>.</span><span style="color: #9CDCFE;">nodejs</span><span> =</span><span style="color: #9CDCFE;"> pkgs</span><span>.</span><span style="color: #9CDCFE;">nodejs_21</span><span>;</span></span>
+<span class="giallo-l"><span>  };</span></span>
+<span class="giallo-l"><span>}</span></span></code></pre>
 <p>Now add this file to the imports in <code>flake.nix</code>:</p>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix"># flake.nix
-# ...
-  imports = [
-    .&#x2F;flake-modules&#x2F;nodejs-packages.nix
-  ];
-# ...
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span style="color: #6A9955;"># flake.nix</span></span>
+<span class="giallo-l"><span style="color: #6A9955;"># ...</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">  imports</span><span style="color: #F44747;"> =</span><span> [</span></span>
+<span class="giallo-l"><span style="color: #CE9178;">    ./flake-modules/nodejs-packages.nix</span></span>
+<span class="giallo-l"><span>  ]</span><span style="color: #F44747;">;</span></span>
+<span class="giallo-l"><span style="color: #6A9955;"># ...</span></span></code></pre>
 <p>Add the file to git and execute <code>nix flake check</code> to notice any errors.</p>
 <p>We can also test the nodejs version that we chose:</p>
-<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">❯ nix run .#nodejs
-warning: Git tree &#x27;&#x2F;Users&#x2F;...&#x2F;projects&#x2F;astro-starlight-with-nix&#x27; is dirty
-Welcome to Node.js v21.5.0.
-Type &quot;.help&quot; for more information.
-</code></pre>
-<h2 id="setup-devshell">Setup devshell</h2>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="shellsession"><span class="giallo-l"><span>❯ nix run .#nodejs</span></span>
+<span class="giallo-l"><span>warning: Git tree &#39;/Users/.../projects/astro-starlight-with-nix&#39; is dirty</span></span>
+<span class="giallo-l"><span>Welcome to Node.js v21.5.0.</span></span>
+<span class="giallo-l"><span>Type &quot;.help&quot; for more information.</span></span></code></pre><h2 id="setup-devshell">Setup devshell</h2>
 <p>This is not so convenient... yet.</p>
 <p>Let's make sure that we and our contributors all use the same version!</p>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix"># flake-modules&#x2F;nodejs-devshell.nix
-{ inputs, ...}: {
-  imports = [
-    inputs.devshell.flakeModule
-  ];
-
-  perSystem = { config, ... }: {
-    devshells.default = {
-      commands = [
-        { package = config.packages.nodejs; category = &quot;docs&quot;; }
-      ];
-    };
-  };
-}
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span style="color: #6A9955;"># flake-modules/nodejs-devshell.nix</span></span>
+<span class="giallo-l"><span>{</span><span style="color: #9CDCFE;"> inputs</span><span>, ...}: {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">  imports</span><span> = [</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    inputs</span><span>.</span><span style="color: #9CDCFE;">devshell</span><span>.</span><span style="color: #9CDCFE;">flakeModule</span></span>
+<span class="giallo-l"><span>  ];</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">  perSystem</span><span> = {</span><span style="color: #9CDCFE;"> config</span><span>, ... }: {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    devshells</span><span>.</span><span style="color: #9CDCFE;">default</span><span> = {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">      commands</span><span> = [</span></span>
+<span class="giallo-l"><span>        {</span><span style="color: #9CDCFE;"> package</span><span> =</span><span style="color: #9CDCFE;"> config</span><span>.</span><span style="color: #9CDCFE;">packages</span><span>.</span><span style="color: #9CDCFE;">nodejs</span><span>;</span><span style="color: #9CDCFE;"> category</span><span> =</span><span style="color: #CE9178;"> &quot;docs&quot;</span><span>; }</span></span>
+<span class="giallo-l"><span>      ];</span></span>
+<span class="giallo-l"><span>    };</span></span>
+<span class="giallo-l"><span>  };</span></span>
+<span class="giallo-l"><span>}</span></span></code></pre>
 <p>Notice the <code>config.packages.nodejs</code>? Here we are referring
 to the nodejs package definition that we setup before.</p>
 <p>Now add this file to the imports in <code>flake.nix</code>:</p>
-<pre data-lang="nix "./flake-modules/nodejs-devshell.nix"" class="language-nix "./flake-modules/nodejs-devshell.nix" "><code class="language-nix "./flake-modules/nodejs-devshell.nix"" data-lang="nix "./flake-modules/nodejs-devshell.nix""># flake.nix
-# ...
-    imports = [
-      .&#x2F;flake-modules&#x2F;nodejs-packages.nix
-      .&#x2F;flake-modules&#x2F;nodejs-devshell.nix
-    ];
-# ...
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="plain"><span class="giallo-l"><span># flake.nix</span></span>
+<span class="giallo-l"><span># ...</span></span>
+<span class="giallo-l"><span>    imports = [</span></span>
+<span class="giallo-l"><span>      ./flake-modules/nodejs-packages.nix</span></span>
+<span class="giallo-l"><span>      ./flake-modules/nodejs-devshell.nix</span></span>
+<span class="giallo-l"><span>    ];</span></span>
+<span class="giallo-l"><span># ...</span></span></code></pre>
 <p>And now add the new file to git and run <code>nix flake check</code>.
 Noticing a pattern? Well, get used to it ;)</p>
 <p>Now we can enter a devshell with <code>node</code> and <code>npm</code> provided
 by nix:</p>
-<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">❯ nix develop
-warning: Git tree &#x27;&#x2F;Users&#x2F;...&#x2F;projects&#x2F;astro-starlight-with-nix&#x27; is dirty
-🔨 Welcome to devshell
-
-[[general commands]]
-
-  menu   - prints this menu
-
-[docs]
-
-  nodejs - Event-driven I&#x2F;O framework for the V8 JavaScript engine
-
-[devshell]$ which npm
-&#x2F;nix&#x2F;store&#x2F;3h53w5zkwpyapp8510d6ivmhmf47x0bs-devshell-dir&#x2F;bin&#x2F;npm
-[devshell]$ which node
-&#x2F;nix&#x2F;store&#x2F;3h53w5zkwpyapp8510d6ivmhmf47x0bs-devshell-dir&#x2F;bin&#x2F;node
-[devshell]$
-exit
-</code></pre>
-<p>You can exit the shell on Unix-like OSes with CTRL+D or by typing &quot;exit&quot;.</p>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="shellsession"><span class="giallo-l"><span>❯ nix develop</span></span>
+<span class="giallo-l"><span>warning: Git tree &#39;/Users/.../projects/astro-starlight-with-nix&#39; is dirty</span></span>
+<span class="giallo-l"><span>🔨 Welcome to devshell</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>[[general commands]]</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>  menu   - prints this menu</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>[docs]</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>  nodejs - Event-driven I/O framework for the V8 JavaScript engine</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>[devshell]$ which npm</span></span>
+<span class="giallo-l"><span>/nix/store/3h53w5zkwpyapp8510d6ivmhmf47x0bs-devshell-dir/bin/npm</span></span>
+<span class="giallo-l"><span>[devshell]$ which node</span></span>
+<span class="giallo-l"><span>/nix/store/3h53w5zkwpyapp8510d6ivmhmf47x0bs-devshell-dir/bin/node</span></span>
+<span class="giallo-l"><span>[devshell]$</span></span>
+<span class="giallo-l"><span>exit</span></span></code></pre>
+<p>You can exit the shell on Unix-like OSes with CTRL+D or by typing "exit".</p>
 <h2 id="adding-an-envrc-for-direnv">Adding an .envrc for direnv</h2>
 <p>All this entering and exiting. Here come direnv to automate that step for us!</p>
 <p>Create a new file:</p>
-<pre data-lang="bash" class="language-bash "><code class="language-bash" data-lang="bash"># .envrc
-#!&#x2F;usr&#x2F;bin&#x2F;env bash
-# ^ make editor happy
-
-#
-# Use https:&#x2F;&#x2F;direnv.net&#x2F; to automatically load the dev shell.
-#
-
-# Update this by looking at https:&#x2F;&#x2F;github.com&#x2F;nix-community&#x2F;nix-direnv#installation
-# under &quot;Direnv source&quot;
-if ! has nix_direnv_version || ! nix_direnv_version 3.0.4; then
-  source_url &quot;https:&#x2F;&#x2F;raw.githubusercontent.com&#x2F;nix-community&#x2F;nix-direnv&#x2F;3.0.4&#x2F;direnvrc&quot; &quot;sha256-DzlYZ33mWF&#x2F;Gs8DDeyjr8mnVmQGx7ASYqA5WlxwvBG4=&quot;
-fi  
-
-watch_file -- flake-modules&#x2F;*.nix
-use flake . --show-trace
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A9955;"># .envrc</span></span>
+<span class="giallo-l"><span style="color: #6A9955;">#!/usr/bin/env bash</span></span>
+<span class="giallo-l"><span style="color: #6A9955;"># ^ make editor happy</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A9955;">#</span></span>
+<span class="giallo-l"><span style="color: #6A9955;"># Use https://direnv.net/ to automatically load the dev shell.</span></span>
+<span class="giallo-l"><span style="color: #6A9955;">#</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A9955;"># Update this by looking at https://github.com/nix-community/nix-direnv#installation</span></span>
+<span class="giallo-l"><span style="color: #6A9955;"># under &quot;Direnv source&quot;</span></span>
+<span class="giallo-l"><span style="color: #C586C0;">if</span><span> !</span><span style="color: #DCDCAA;"> has</span><span style="color: #CE9178;"> nix_direnv_version</span><span> || !</span><span style="color: #DCDCAA;"> nix_direnv_version</span><span style="color: #B5CEA8;"> 3.0.4</span><span>;</span><span style="color: #C586C0;"> then</span></span>
+<span class="giallo-l"><span style="color: #DCDCAA;">  source_url</span><span style="color: #CE9178;"> &quot;https://raw.githubusercontent.com/nix-community/nix-direnv/3.0.4/direnvrc&quot; &quot;sha256-DzlYZ33mWF/Gs8DDeyjr8mnVmQGx7ASYqA5WlxwvBG4=&quot;</span></span>
+<span class="giallo-l"><span style="color: #C586C0;">fi</span><span>  </span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #DCDCAA;">watch_file</span><span style="color: #569CD6;"> --</span><span style="color: #CE9178;"> flake-modules/</span><span style="color: #569CD6;">*</span><span style="color: #CE9178;">.nix</span></span>
+<span class="giallo-l"><span style="color: #DCDCAA;">use</span><span style="color: #CE9178;"> flake .</span><span style="color: #569CD6;"> --show-trace</span></span></code></pre>
 <p>If you press enter on the shell prompt now and you have <code>direnv</code> set up
 properly, you should get something like:</p>
-<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">direnv: error &#x2F;Users&#x2F;...&#x2F;projects&#x2F;astro-starlight-with-nix&#x2F;.envrc is blocked. Run `direnv allow` to approve its content
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="shellsession"><span class="giallo-l"><span>direnv: error /Users/.../projects/astro-starlight-with-nix/.envrc is blocked. Run `direnv allow` to approve its content</span></span></code></pre>
 <p>Well, we'll do as we are told:</p>
-<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">❯ direnv allow .
-direnv: loading ~&#x2F;projects&#x2F;astro-starlight-with-nix&#x2F;.envrc
-direnv: loading https:&#x2F;&#x2F;raw.githubusercontent.com&#x2F;nix-community&#x2F;nix-direnv&#x2F;3.0.4&#x2F;direnvrc (sha256-DzlYZ33mWF&#x2F;Gs8DDeyjr8mnVmQGx7ASYqA5WlxwvBG4=)
-direnv: using flake . --show-trace
-direnv: nix-direnv: using cached dev shell
-🔨 Welcome to devshell
-
-[[general commands]]
-
-  menu   - prints this menu
-
-[docs]
-
-  nodejs - Event-driven I&#x2F;O framework for the V8 JavaScript engine
-
-direnv: export +DEVSHELL_DIR +IN_NIX_SHELL +NIXPKGS_PATH +PRJ_DATA_DIR +PRJ_ROOT +name ~PATH ~XDG_DATA_DIRS
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="shellsession"><span class="giallo-l"><span>❯ direnv allow </span><span style="color: #DCDCAA;">.</span></span>
+<span class="giallo-l"><span>direnv: loading ~/projects/astro-starlight-with-nix/.envrc</span></span>
+<span class="giallo-l"><span>direnv: loading https://raw.githubusercontent.com/nix-community/nix-direnv/3.0.4/direnvrc (sha256-DzlYZ33mWF/Gs8DDeyjr8mnVmQGx7ASYqA5WlxwvBG4=)</span></span>
+<span class="giallo-l"><span>direnv: using flake . --show-trace</span></span>
+<span class="giallo-l"><span>direnv: nix-direnv: using cached dev shell</span></span>
+<span class="giallo-l"><span>🔨 Welcome to devshell</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>[[general commands]]</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>  menu   - prints this menu</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>[docs]</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>  nodejs - Event-driven I/O framework for the V8 JavaScript engine</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>direnv: export +DEVSHELL_DIR +IN_NIX_SHELL +NIXPKGS_PATH +PRJ_DATA_DIR +PRJ_ROOT +name ~PATH ~XDG_DATA_DIRS</span></span></code></pre>
 <p>Awesome! Now we have <code>npm</code> and <code>nodejs</code> with the chosen version in our PATH
 whenever we are in this directory.</p>
 <p>It also creates a <code>.direnv</code> folder that you probably want to add to your <code>.gitignore</code>:</p>
-<pre data-lang="bash" class="language-bash "><code class="language-bash" data-lang="bash">echo &quot;.direnv&quot; &gt;&gt;.gitignore
-</code></pre>
-<h2 id="checking-your-flake-with-nix-repl">Checking your flake with <code>nix repl</code></h2>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #DCDCAA;">echo</span><span style="color: #CE9178;"> &quot;.direnv&quot;</span><span> &gt;&gt;</span><span style="color: #CE9178;">.gitignore</span></span></code></pre><h2 id="checking-your-flake-with-nix-repl">Checking your flake with <code>nix repl</code></h2>
 <p><code>nix repl</code> would deserve its own blog article or book but to get your started:</p>
-<pre data-lang="console ":lf ."" class="language-console ":lf ." "><code class="language-console ":lf ."" data-lang="console ":lf ."">❯ nix repl
-Welcome to Nix 2.18.1. Type :? for help.
-
-nix-repl&gt; :lf .
-warning: Git tree &#x27;&#x2F;Users&#x2F;peterkolloch&#x2F;projects&#x2F;astro-starlight-with-nix&#x27; is dirty
-Added 20 variables.
-</code></pre>
-<p><code>:lf .</code> stands for &quot;load flake&quot; and has to be followed by a path. Here,
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="plain"><span class="giallo-l"><span>❯ nix repl</span></span>
+<span class="giallo-l"><span>Welcome to Nix 2.18.1. Type :? for help.</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>nix-repl&gt; :lf .</span></span>
+<span class="giallo-l"><span>warning: Git tree &#39;/Users/peterkolloch/projects/astro-starlight-with-nix&#39; is dirty</span></span>
+<span class="giallo-l"><span>Added 20 variables.</span></span></code></pre>
+<p><code>:lf .</code> stands for "load flake" and has to be followed by a path. Here,
 the current directory.</p>
 <p>Now the <code>outputs</code> of the flake are discoverable in the <code>outputs</code> attribute
 in the shell. You can use tab completion (i.e. hit TAB after <code>outputs.</code>):</p>
-<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">nix-repl&gt; outputs.
-outputs.apps                 outputs.checks               outputs.devShells            outputs.formatter            outputs.legacyPackages       outputs.nixosConfigurations  outputs.nixosModules         outputs.overlays             outputs.packages
-nix-repl&gt; outputs.devShells
-outputs.devShells
-nix-repl&gt; outputs.devShells.
-outputs.devShells.aarch64-darwin  outputs.devShells.aarch64-linux   outputs.devShells.x86_64-darwin   outputs.devShells.x86_64-linux
-nix-repl&gt; outputs.devShells.aarch64-darwin.default
-</code></pre>
-<p>You see that there are attributes for each <code>system</code> (architecture) that 
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="shellsession"><span class="giallo-l"><span>nix-repl&gt; outputs.</span></span>
+<span class="giallo-l"><span>outputs.apps                 outputs.checks               outputs.devShells            outputs.formatter            outputs.legacyPackages       outputs.nixosConfigurations  outputs.nixosModules         outputs.overlays             outputs.packages</span></span>
+<span class="giallo-l"><span>nix-repl&gt; outputs.devShells</span></span>
+<span class="giallo-l"><span>outputs.devShells</span></span>
+<span class="giallo-l"><span>nix-repl&gt; outputs.devShells.</span></span>
+<span class="giallo-l"><span>outputs.devShells.aarch64-darwin  outputs.devShells.aarch64-linux   outputs.devShells.x86_64-darwin   outputs.devShells.x86_64-linux</span></span>
+<span class="giallo-l"><span>nix-repl&gt; outputs.devShells.aarch64-darwin.default</span></span></code></pre>
+<p>You see that there are attributes for each <code>system</code> (architecture) that
 we defined our flake for.</p>
 <h2 id="updating-all-dependencies">Updating all dependencies</h2>
 <p>If you want to use a <code>nodejs</code> version from a more recent nixpkgs later,
 you'll have to update your flake dependencies. That is as easy as:</p>
-<pre data-lang="bash" class="language-bash "><code class="language-bash" data-lang="bash">nix flake update
-</code></pre>
-<h2 id="vscode-support">VSCode support</h2>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #DCDCAA;">nix</span><span style="color: #CE9178;"> flake update</span></span></code></pre><h2 id="vscode-support">VSCode support</h2>
 <p>Did you know that you can actually force VSCode and some other IDEs to use
 exactly the same nodejs version for builds that you specified?</p>
-<p>For VSCode you can use the <a href="https://marketplace.visualstudio.com/items?itemName=Rubymaniac.vscode-direnv">direnv</a> plugin. There are a couple of them. This
+<p>For VSCode you can use the <a rel="external" href="https://marketplace.visualstudio.com/items?itemName=Rubymaniac.vscode-direnv">direnv</a> plugin. There are a couple of them. This
 is the one that I use currently.</p>
 <p>To help fellow VSCode users find the extension quickly, you can add the following
 file to the project:</p>
-<pre data-lang="json" class="language-json "><code class="language-json" data-lang="json">&#x2F;&#x2F; .vscode&#x2F;extensions.json
-{
-    &quot;recommendations&quot;: [
-        &quot;rubymaniac.vscode-direnv&quot;
-    ]
-}
-</code></pre>
-<h2 id="conclusion">Conclusion</h2>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="json"><span class="giallo-l"><span style="color: #6A9955;">// .vscode/extensions.json</span></span>
+<span class="giallo-l"><span>{</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    &quot;recommendations&quot;</span><span>: [</span></span>
+<span class="giallo-l"><span style="color: #CE9178;">        &quot;rubymaniac.vscode-direnv&quot;</span></span>
+<span class="giallo-l"><span>    ]</span></span>
+<span class="giallo-l"><span>}</span></span></code></pre><h2 id="conclusion">Conclusion</h2>
 <p>Now we have set up a very simple dev shell with a pinned nodejs version
 that is convenient to use. That is a big help to onboard anyone onto the project.</p>
 <p>We did it step-by step by adding little tiny <code>flake-module.nix</code> files to our flake.
@@ -354,8 +334,8 @@ If you scope one <code>flake-module.nix</code> to one purpose, it remains easy t
 <p>A good basis - let's soon add more on top! For example,
 a documentation site built with the astro framework:</p>
 <p><a href="../2024_astro_starlight_with_nix">Tutorial: Building our Astro Starlight page with Nix &amp; flake.parts</a></p>
-<p>Feel free to give me feedback/ask questions at <a href="https://discourse.nixos.org/t/tutorial-using-flake-parts-to-set-up-a-nodejs-devshell/37940">discourse</a> or in a
-<a href="https://github.com/kolloch/blog.eigenvalue.net/issues">GitHub issue</a>. I want
+<p>Feel free to give me feedback/ask questions at <a rel="external" href="https://discourse.nixos.org/t/tutorial-using-flake-parts-to-set-up-a-nodejs-devshell/37940">discourse</a> or in a
+<a rel="external" href="https://github.com/kolloch/blog.eigenvalue.net/issues">GitHub issue</a>. I want
 to hear your thoughts so feel free to err on the side of commenting too much.</p>
 
     </div>

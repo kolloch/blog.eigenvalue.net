@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Peter Kolloch - Blog - authentication</title>
+      <link>https://blog.eigenvalue.net</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.eigenvalue.net/tags/authentication/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Sun, 19 Nov 2023 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>Nix: Authenticated Fetches from GitLab - Reading about Related Work</title>
+          <pubDate>Sun, 19 Nov 2023 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/2023-nix-fetch-with-authentication/</link>
+          <guid>https://blog.eigenvalue.net/2023-nix-fetch-with-authentication/</guid>
+          <description xml:base="https://blog.eigenvalue.net/2023-nix-fetch-with-authentication/">&lt;p&gt;In &lt;a href=&quot;&#x2F;2023-nix-for-private-binaries&#x2F;&quot;&gt;our quest&lt;&#x2F;a&gt; to establish
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;nixos.org&quot;&gt;Nix&lt;&#x2F;a&gt; for distributing developer toolchains, we depend also
+on private, company-specific tools. We do not want to nixify every build but
+simply fetch the existing build artifacts using GitLab authentication.&lt;&#x2F;p&gt;
+&lt;p&gt;This might not be exactly what you need but I assume it is incredibly common to
+want to fetch artifacts from some authenticated API.&lt;&#x2F;p&gt;
+&lt;p&gt;I discussed this with &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;ericson2314_&quot;&gt;John Ericson&lt;&#x2F;a&gt; and he
+gave me some pointers to current work in progress or proposals that might be
+related. Thank you!&lt;&#x2F;p&gt;
+&lt;p&gt;Not exactly being familiar with core Nix development, the impact of these issues
+is not always easy for me to understand. Therefore, I thought it might also help
+others if I published the notes while reading through the suggested material.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;nix-store-acls&quot;&gt;Nix Store ACLs&lt;&#x2F;h2&gt;
+&lt;p&gt;Reference: &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;rfcs&#x2F;pull&#x2F;143&quot;&gt;RFC 0143&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Implement a way to only allow user access to a store path if they provide
+proof that they have all the necessary sources available, or had the access
+permission explicitly granted to them.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;Well written!&lt;&#x2F;p&gt;
+&lt;p&gt;Obviously, this is related to stores and is superficially nearly the opposite to
+what we want: This is about restricting access to parts of a store -- not being
+more permissive.&lt;&#x2F;p&gt;
+&lt;p&gt;But, could we not require substitution of all private artifacts? I.e. ensure
+that all private artifacts are available in our shared Nix store (cache)? The
+fetches would just be &quot;Fixed Output Derivations&quot;, meaning that they already
+specify the hash of the fetched artifact, and before attempting the fetch our
+nix client would check if it is already available in the cache.&lt;&#x2F;p&gt;
+&lt;p&gt;This would not even require this RFC but simply a private Nix store, in our case
+via AWS S3.&lt;&#x2F;p&gt;
+&lt;p&gt;I have some concerns:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;The fetching &quot;builder code&quot; would be misleading since the intention is that it
+would never be executed. I vaguely remember there is a construct in
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nixpkgs&#x2F;&quot;&gt;Nixpkgs&lt;&#x2F;a&gt; that models &quot;you need to download
+this independently and upload it to your store&quot;, so that could be remedied.&lt;&#x2F;li&gt;
+&lt;li&gt;Someone or something would still need to get access to the artifact and
+upload it to the shared store. That might be relatively easy to achieve (e.g.
+by putting the upload into the CI&#x2F;CD pipeline of the binary) or difficult,
+depending as so often on the context. For us, it would be acceptable, even
+though I&#x27;d like to keep the CI&#x2F;CD pipelines untouched for now so that the nix
+related changes keep in a few isolated repos.&lt;&#x2F;li&gt;
+&lt;li&gt;I conceptualize the AWS S3 Store that we set up as &quot;cache&quot; that does not need
+to be backed up etc. The requirement of always having all private binaries
+available there, would invalidate that.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Where would the RFC be of use for us?&lt;&#x2F;p&gt;
+&lt;p&gt;The RFC itself mentions that this is probably not a good idea to use this for
+secrets. So we should not use it to e.g. store GitLab credentials in a store
+path in a protected manner. But I&#x27;ll think more about that.&lt;&#x2F;p&gt;
+&lt;p&gt;What the RFC does allow is to allow access to some binaries without making their
+full build recipes and source available. That could be nice but is generally not
+our problem: The build of the binaries is not nixified anyways and thus Nix
+doesn&#x27;t see the source. Furthermore, all our employees can see pretty much all
+our source code and we like it that way.&lt;&#x2F;p&gt;
+&lt;p&gt;In theory, the RFC could be a solution for bootstrapping: In our case, for even
+authenticating, we need certain authentication helpers. With the RFC, we could
+expose the parts of the store publicly that are strictly needed for
+bootstrapping publicly and all the rest only privately.&lt;&#x2F;p&gt;
+&lt;p&gt;But all in all, it looks quite complicated to pull off and is not a good match
+for our needs, I think.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;builtin-fetching-should-be-represented-by-derivations&quot;&gt;Builtin fetching should be represented by derivations&lt;&#x2F;h2&gt;
+&lt;p&gt;Reference: &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;9077&quot;&gt;Nix Github Issue #9077&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Currently, there are two fundamental different ways of &quot;fetching&quot;:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&quot;built-in fetchers&quot; (libfetchers): These are functions of &quot;Nix the language&quot; and are
+executed directly while evaluating the build tree.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&quot;fixed-output derivation fetchers&quot;: Nix allows them to access the network by
+virtue of an easily verifiable promise. FODs need to specify the hash of
+their output upfront.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;This has some indirect consequences which is why, depending on their needs,
+prefer one over the other.&lt;&#x2F;p&gt;
+&lt;p&gt;&quot;Built-in&quot; fetchers run wherever the Nix expressions are evaluated - in the
+environment of the user that invoked the build. That has an immediate
+application for us: If the user is authenticated, the fetcher also has
+access to the associated credentials!&lt;&#x2F;p&gt;
+&lt;p&gt;Yet, it also requires that we have an appropriate fetcher directly built into
+Nix, which makes this weirdly inflexible: The built-in fetchers do not e.g.
+allow setting an authentication header from an environment variable. That makes
+it impossible fetching job artifacts via &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;gitlab.com&#x2F;gitlab-org&#x2F;gitlab&#x2F;-&#x2F;issues&#x2F;341157&quot;&gt;the GitLab API that does not allow
+basic authentication&lt;&#x2F;a&gt;
+which would be supported via credentials via the &lt;del&gt;insanely limited, not even
+supporting passwords with spaces&lt;&#x2F;del&gt; time-proven &lt;code&gt;netrc&lt;&#x2F;code&gt; mechanism.&lt;&#x2F;p&gt;
+&lt;p&gt;In addition to this inflexibility due to the nature of being in the Nix code
+(live with what we Elders have foreseen, Young Jedi), there are also performance issues,
+e.g. builtin-fetchers are only executed one by one and not in parallel with
+derivations. This is what the issues strives to fix that and more (I believe).
+That is really cool!&lt;&#x2F;p&gt;
+&lt;p&gt;I am not clear, though, &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;9077#issuecomment-1817861537&quot;&gt;if this would mean that the built-in fetchers would
+still be executed by the build
+client&lt;&#x2F;a&gt;, e.g.
+the user that called &lt;code&gt;nix build&lt;&#x2F;code&gt;. Let&#x27;s assume that in good faith for now,
+otherwise this would make authentication more difficult not easier. (Note from
+future Peter: This gets actually addressed in the next section!)&lt;&#x2F;p&gt;
+&lt;p&gt;So in a future world where Nix contained a built-in fetcher suitable for GitLab,
+this could mitigate some of the downsides of built-in fetchers.&lt;&#x2F;p&gt;
+&lt;p&gt;How would it work then with remote builders?&lt;&#x2F;p&gt;
+&lt;p&gt;For the first time:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;nix build&lt;&#x2F;code&gt; gets invoked.&lt;&#x2F;li&gt;
+&lt;li&gt;Fetch from GitLab running in the same process or at least environment as the
+&lt;code&gt;nix build&lt;&#x2F;code&gt; process so it has access to all user authentication.&lt;&#x2F;li&gt;
+&lt;li&gt;The result is uploaded to the builders from the local machine...&lt;&#x2F;li&gt;
+&lt;li&gt;build continues&lt;&#x2F;li&gt;
+&lt;li&gt;Someway or the other, the result of the fetch ends up in our shared Nix
+store&#x2F;substituter.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Afterwards:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;nix build&lt;&#x2F;code&gt; gets invoked.&lt;&#x2F;li&gt;
+&lt;li&gt;The result gets substituted which is also fast on remote builders.&lt;&#x2F;li&gt;
+&lt;li&gt;Build continues...&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Not too bad, but actually nearly not at all dependent on issue #9077. It mostly
+depends on supporting GitLab by having more flexible built-in fetchers.
+Potentially, I could do that with a nix plugin or patch.&lt;&#x2F;p&gt;
+&lt;p&gt;What is really cool about this solution is that the credentials never leave the
+client. Which makes it both simple and secure. But implementing that issue in a
+way that would allow executing these fetches in parallel but on the client is
+not really trivial.&lt;&#x2F;p&gt;
+&lt;p&gt;BTW, built-in fetchers have other super powers (e.g. not necessarily
+requiring an output hash but simply a git hash) and FODs have some other problems
+(e.g. &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;nix-rerunning-fixed-output-derivations&#x2F;&quot;&gt;being unwantedly substituted when the URL but not the hash is
+changed&lt;&#x2F;a&gt;).&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;optional-client-side-building&quot;&gt;Optional client-side building&lt;&#x2F;h2&gt;
+&lt;p&gt;Reference: &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;9344&quot;&gt;Nix Github Issue #9344&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;ol&gt;
+&lt;li&gt;For fixed output derivations that need authentication, it is probably
+better to run them as the current user in order to give them secrets,
+especially ephemeral secrets (like expiring tokens) that might require some
+humans in the loop (various 2fa schemes) and are cumbersome to store in the
+store.&lt;&#x2F;li&gt;
+&lt;li&gt;Builtin fetching should be represented by derivations #9077 once the above
+is sorted out, we should do this too. Currently the main reason fetching is
+not done with derivations is authentication. This provides a proper
+solution. All fetching done as client-side derivations nicely meets in the
+middle of the current fixed-output derivations vs libfetchers divide.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;Huh! John addressed my previous concerns here without me even realizing. Thanks
+again!&lt;&#x2F;p&gt;
+&lt;p&gt;After this John dives directly into implementation details that are hard to
+follow for me:&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;General decoupling. Building shouldn&#x27;t depend on using the SQL database
+(and I don&#x27;t think it currently does). It ought to work with other stores that
+also provide a bike system view.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;I assume that he means &quot;build system view&quot; but &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;9344#issuecomment-1817868871&quot;&gt;I can&#x27;t follow the relationship to
+the SQLite database&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h2&gt;
+&lt;p&gt;It was interesting to learn about the different proposals. Some of them would be
+awesome improvements, the last one would nearly solve my problem.&lt;&#x2F;p&gt;
+&lt;p&gt;Short term I see the following possibilities for allowing private fetches from
+GitLab:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Patching nix or writing a plugin so that I can use a more flexible &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;nixos.org&#x2F;manual&#x2F;nix&#x2F;stable&#x2F;language&#x2F;builtins.html#builtins-fetchurl&quot;&gt;fetchurl
+built-in&lt;&#x2F;a&gt;
+that supports setting headers from environment variables. That would allow me
+to pass credentials without somehow having them end up in the store.&lt;&#x2F;li&gt;
+&lt;li&gt;Using a custom FOD to fetch from GitLab and have a mechanism to pass the
+GitLab API token to the builder.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;The second one could be easily achieved by similar means as described
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;2023-nix-s3-store-authentication&#x2F;&quot;&gt;here&lt;&#x2F;a&gt;: E.g.
+allowing trusted clients to change allowlisted environment variables in the
+builder. Since that is not possible yet and requires further discussion, I
+implemented a hacky way to do that in our internal PoC. I might write a separate
+blog post about that!&lt;&#x2F;p&gt;
+&lt;p&gt;If you want to know more about my current journey and context, check out &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;2023-nix-for-private-binaries&#x2F;&quot;&gt;Nix:
+Distributing private&#x2F;public
+binaries&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;Noticed a mistake? Want to discuss something with me? Feel free to
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;discourse.nixos.org&#x2F;t&#x2F;nix-authenticated-fetches-from-gitlab-reading-about-related-work&#x2F;35708.&quot;&gt;discuss&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Alos, feel free to get in touch with me with the information shared on &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&quot;&gt;my
+GitHub profile kolloch&lt;&#x2F;a&gt; or &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;pkolloch&quot;&gt;Twitter
+@pkolloch&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+</description>
+      </item>
+      <item>
+          <title>Nix in the Enterprise: AWS S3 Store Authentication</title>
+          <pubDate>Sun, 12 Nov 2023 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/2023-nix-s3-store-authentication/</link>
+          <guid>https://blog.eigenvalue.net/2023-nix-s3-store-authentication/</guid>
+          <description xml:base="https://blog.eigenvalue.net/2023-nix-s3-store-authentication/">&lt;p&gt;Private stores? Temporary credentials? At the time of
+writing this, definitely not easy! (Please, please prove me wrong!)&lt;&#x2F;p&gt;
+&lt;p&gt;At the end of this article I&#x27;ll make a pragmatic proposal that should be quite
+easy to implement and improve the user experience significantly.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;stores-what-s-possible-today&quot;&gt;Stores: What&#x27;s possible today?&lt;&#x2F;h2&gt;
+&lt;p&gt;&quot;Stores&quot; store build results and allow you &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;nixos.org&#x2F;manual&#x2F;nix&#x2F;stable&#x2F;package-management&#x2F;sharing-packages&quot;&gt;to share them between
+machines&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;You can copy packages (store paths) with their transitive dependencies (closure)
+between machines explicitly, e.g. with &lt;code&gt;nix copy&lt;&#x2F;code&gt; or &lt;code&gt;nix-copy-closure&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;You can also use them as a cache (substituter) during builds: For suitable build
+steps (derivations), Nix will check if the result has already been build and is
+available for download.&lt;&#x2F;p&gt;
+&lt;p&gt;How can we authenticate towards private stores? That depends on the store type:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;SSH. Well with the usual SSH mechanisms.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;HTTPS. You can use &lt;code&gt;.netrc&lt;&#x2F;code&gt; to provide basic auth credentials.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;AWS S3. Uses the AWS SDK&#x27;s
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;blob&#x2F;458e511dc41dd1726a42f001fa34222b3ab9223a&#x2F;src&#x2F;libstore&#x2F;s3-binary-cache-store.cc#L96-L109&quot;&gt;&lt;code&gt;Aws::Auth::AWSCredentialsProvider&lt;&#x2F;code&gt;&lt;&#x2F;a&gt;
+which e.g. &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;sdk.amazonaws.com&#x2F;cpp&#x2F;api&#x2F;LATEST&#x2F;aws-cpp-sdk-core&#x2F;html&#x2F;md_docs_2_credentials___providers.html&quot;&gt;search for credentials in environment variables and configuration
+files&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;How do you provide these credentials? It depends on the context in which the
+store is used.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;nix copy&lt;&#x2F;code&gt;: The credentials e.g. for AWS are taken from the invoking user or
+the environment in which nix runs.&lt;&#x2F;li&gt;
+&lt;li&gt;Substitution with single-user setup without daemon: Same.&lt;&#x2F;li&gt;
+&lt;li&gt;Substitution but with nix-daemon: Credentials are resolved in the environment
+of the nix-daemon or from the config files of the nix-daemon user.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;That is already super confusing. You have entered an AWS session with temporary
+credentials available in environment variables:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;nix copy&lt;&#x2F;code&gt; just works.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;nix build&lt;&#x2F;code&gt; cannot use the substituter when it uses the nix-daemon.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;cachix-state-of-the-art-for-https-stores&quot;&gt;Cachix: State of the art for HTTPS stores&lt;&#x2F;h2&gt;
+&lt;p&gt;Cachix uses a CLI to make this as convenient as possible:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;It assumes you are a trusted user that can change nix-daemon settings on the
+fly.&lt;&#x2F;li&gt;
+&lt;li&gt;It updates your &lt;code&gt;nix.conf&lt;&#x2F;code&gt; with a potential private cache and a &lt;code&gt;net-rc&lt;&#x2F;code&gt; file
+setting.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;nix copy&lt;&#x2F;code&gt; takes this config directly and works.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;nix build&lt;&#x2F;code&gt; passes this config to the nix-daemon that can hopefully also read
+your net-rc file.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Passing the config to the nix-daemon is implemented via daemon op
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;blob&#x2F;458e511dc41dd1726a42f001fa34222b3ab9223a&#x2F;src&#x2F;libstore&#x2F;daemon.cc#L723C26-L758C6&quot;&gt;SetOptions&lt;&#x2F;a&gt;
+which changes the &lt;code&gt;Settings&lt;&#x2F;code&gt; globally. That is fine, because the nix-daemon is
+forked for every connection.&lt;&#x2F;p&gt;
+&lt;p&gt;What are the problems?&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Need to patch your &lt;code&gt;nix-config&lt;&#x2F;code&gt;. This is potentially not that bad!&lt;&#x2F;li&gt;
+&lt;li&gt;Remote builders need additional server-side config. The config options might
+actually even be transfered with the &lt;code&gt;SetOptions&lt;&#x2F;code&gt; command, not sure, but your
+net-rc file is likely unavailable on the remote builder. Might be OK if you
+don&#x27;t use them or someone else sets them up for you!&lt;&#x2F;li&gt;
+&lt;li&gt;Does not work well with temporary credentials. Might be a showstopper in some
+environments.&lt;&#x2F;li&gt;
+&lt;li&gt;Only works for HTTP(S) with Basic Authenticationstores. Yeah, well, if you use
+something else... Doesn&#x27;t work with AWS S3...&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;aws-s3-state-of-the-art-solution&quot;&gt;AWS S3: State of the art solution&lt;&#x2F;h2&gt;
+&lt;p&gt;If you have a single user nix setup, it is rather easy. Is your user
+authenticated and authorized to access the S3 store? So is nix running as that
+user.&lt;&#x2F;p&gt;
+&lt;p&gt;It becomes more annoying if you use a nix-daemon: You also need to provide the
+credentials to the nix-daemon. If you use&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;pragmatic-user-friendly-solution&quot;&gt;Pragmatic User-Friendly Solution&lt;&#x2F;h2&gt;
+&lt;p&gt;I assume that your trust your nix-daemon or remote builder. I think that&#x27;s fair
+and the assumption behind the approach that cachix uses.&lt;&#x2F;p&gt;
+&lt;p&gt;While &lt;code&gt;netrc&lt;&#x2F;code&gt; works pretty decently for Cachix, it doesn&#x27;t match AWS well since
+it doesn&#x27;t use Basic Authentication. Remember, the complicated logic is already
+all inside of the nix-daemon via the AWS SDK, we just need to pass a couple of
+values to the nix-daemon.&lt;&#x2F;p&gt;
+&lt;p&gt;I see two major approaches:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Custom logic for AWS: Either extend &lt;code&gt;SetOptions&lt;&#x2F;code&gt; or create a new operation to
+transfer AWS credentials and store them in special-purpose fields. Modify the
+credential provider chain to also look there for credentials.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;A general way to transfer environment variables from the nix client to the
+daemon for the current session.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;h2 id=&quot;details-for-passing-environment-variables-to-the-daemon&quot;&gt;Details for passing environment variables to the daemon&lt;&#x2F;h2&gt;
+&lt;p&gt;I like the second one better because it would also solve the problem if we
+integrated solutions for other cloud providers. And it might even be an
+acceptable workaround for fetches from private sources in builds (more about
+that later).&lt;&#x2F;p&gt;
+&lt;p&gt;I&#x27;d restrict this features with some explicit config options.&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;In the nix-daemon: &lt;code&gt;allowed-env-variables-from-trusted-client&lt;&#x2F;code&gt; as a list of
+environment variables that may be set from a trusted client. E.g.:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;allowed-env-variables-from-trusted-client = AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;For the nix client: &lt;code&gt;pass-env-variables&lt;&#x2F;code&gt; as a list of environment variables
+that are passed whenever a connection to the nix-daemon is opened. E.g.:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;pass-env-variables = AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;If a client has valid AWS environment variables, this will make it just work,
+even with temporary credentials.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;nix copy&lt;&#x2F;code&gt; &#x2F; &lt;code&gt;nix build&lt;&#x2F;code&gt; will just both work after adding a few standard
+config options.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;The config can remain static while the credentials can change.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Yey!&lt;&#x2F;p&gt;
+&lt;p&gt;It might even work with remote builds: at least if the &lt;code&gt;SetOptions&lt;&#x2F;code&gt; op is also
+used there.&lt;&#x2F;p&gt;
+&lt;p&gt;Restrictions:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;This requires the client to have a valid AWS session whenever you might
+access the AWS S3 store. It cannot prompt for e.g. your MFA code on demand.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;If the nix-daemon implementation ever changes and does not fork on every new
+connection, then changing the global environment variables of the process is
+also a nono. Note though, that a lot of the implementation would need to
+change in that case.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h2&gt;
+&lt;p&gt;I can definitely think of other solutions here but this seems to have the right
+mix of &quot;good enough&quot;, &quot;not too specialized&quot; and &quot;easy to implement.&quot;&lt;&#x2F;p&gt;
+&lt;p&gt;I might be wrong, though, and would love to hear your thoughts!&lt;&#x2F;p&gt;
+&lt;p&gt;If you want to know more about my current journey and context, check out &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;2023-nix-for-private-binaries&#x2F;&quot;&gt;Nix:
+Distributing private&#x2F;public
+binaries&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;Feel free to get in touch
+with me with the information shared on my GitHub profile:
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&quot;&gt;kolloch&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+</description>
+      </item>
+    </channel>
+</rss>

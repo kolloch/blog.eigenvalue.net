@@ -124,7 +124,7 @@ on my Fuji XT-3 with HEVC (h265) on my laptop without tweaking VLC. And even on
 my hefty AMD Ryzen Threadripper 2950X 16-Core, I cannot encode on the CPU alone
 in realtime.</p>
 <p>Therefore, encoding in realtime should probably be impossible. Or not? I had to
-try. Oh, and on Linux. <a href="https://nixos.org">NixOS</a> to be specific.</p>
+try. Oh, and on Linux. <a rel="external" href="https://nixos.org">NixOS</a> to be specific.</p>
 <p>Note that this article is not full of deep insights but mostly contains things I
 tried and then eventually worked. This kind of content has helped me
 tremendously in the past, so let's dump it into the Interwebs.</p>
@@ -147,28 +147,25 @@ better documentation for it and it seemed to work better.</p>
 <h2 id="digging-deeper-required-software">Digging deeper: Required Software</h2>
 <p>If you want to follow along, I installed these packages in NixOS by adding them
 to my package list:</p>
-<pre><code># Capturing and encoding
-ffmpeg-full # My version was 4.2.2
-
-# Inspect video devices etc.
-v4l-utils
-usbutils
-
-# Hardware acceleration for encoding&#x2F;decoding
-vaapiIntel
-libva
-libva-utils
-</code></pre>
-<h2 id="underlying-video-device">Underlying video device</h2>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="plain"><span class="giallo-l"><span># Capturing and encoding</span></span>
+<span class="giallo-l"><span>ffmpeg-full # My version was 4.2.2</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span># Inspect video devices etc.</span></span>
+<span class="giallo-l"><span>v4l-utils</span></span>
+<span class="giallo-l"><span>usbutils</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span># Hardware acceleration for encoding/decoding</span></span>
+<span class="giallo-l"><span>vaapiIntel</span></span>
+<span class="giallo-l"><span>libva</span></span>
+<span class="giallo-l"><span>libva-utils</span></span></code></pre><h2 id="underlying-video-device">Underlying video device</h2>
 <p><code>ffmpeg</code> and other CLI tools require us to specify the video device name -- at
 least if you have multiple video inputs e.g. the built-in webcam and the Elgato
 Camlink 4K. You can either use the <code>/dev/videoX</code> device name that you saw in OBS
 Studio or find the device names with:</p>
-<pre><code>v4l2-ctl --list-devices
-Cam Link 4K: Cam Link 4K (usb-0000:39:00.0-1.2):
-	&#x2F;dev&#x2F;video1
-	&#x2F;dev&#x2F;video2
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="plain"><span class="giallo-l"><span>v4l2-ctl --list-devices</span></span>
+<span class="giallo-l"><span>Cam Link 4K: Cam Link 4K (usb-0000:39:00.0-1.2):</span></span>
+<span class="giallo-l"><span>	/dev/video1</span></span>
+<span class="giallo-l"><span>	/dev/video2</span></span></code></pre>
 <p>You can already use the device names (the first one for the Cam Link) that you
 found here. The trouble is that these device names might depend on the order in
 which the video devices are detected. To get a stable device name that works
@@ -186,7 +183,7 @@ it doesn't for you, try specifying one with <code>-input_format</code>, e.g. <co
 <p>What does <code>ffmpeg</code> do by default? Let's see by exchanging <code>ffplay</code> with <code>ffmpeg</code>
 and specifying an output file:</p>
 <p><code>ffmpeg -f v4l2 -i $V4L_DEVICE capture.mkv</code></p>
-<p>Hey, that works! But only barely. </p>
+<p>Hey, that works! But only barely.</p>
 <ul>
 <li>I cannot encode the video in real time and the video is buffered. The raw
 video feed with 29.97 fps clocks in at about 3Gb/s, a bit less for 25 fps. If
@@ -195,13 +192,12 @@ quite short videos ;)</li>
 <li>Also, the output is ugly, we need to specify something nicer.</li>
 </ul>
 <h2 id="hardware-encoding-to-the-rescue">Hardware-encoding to the rescue</h2>
-<p>Since my laptop does not have a discrete graphics card, I am using the &quot;VAAPI&quot;
+<p>Since my laptop does not have a discrete graphics card, I am using the "VAAPI"
 standard which is supported by newer Intel CPUs.</p>
-<pre><code>ffmpeg -vaapi_device &#x2F;dev&#x2F;dri&#x2F;renderD128 \
-  -f v4l2 -input_format nv12 -i $V4L_DEVICE \
-  -vf &#x27;hwupload&#x27; \
-  -c:v hevc_vaapi -b:v 100M -maxrate:v 120M capture.mkv
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="plain"><span class="giallo-l"><span>ffmpeg -vaapi_device /dev/dri/renderD128 \</span></span>
+<span class="giallo-l"><span>  -f v4l2 -input_format nv12 -i $V4L_DEVICE \</span></span>
+<span class="giallo-l"><span>  -vf &#39;hwupload&#39; \</span></span>
+<span class="giallo-l"><span>  -c:v hevc_vaapi -b:v 100M -maxrate:v 120M capture.mkv</span></span></code></pre>
 <p>Woooh! That's a lot to understand.</p>
 <p>Let's start with the basics: A basic ffmpeg command consists of a some global
 flags (<code>-vaapi_device /dev/dri/renderD128</code> in this case) list of inputs (<code>-i ...</code>) and a list of outputs (e.g. file names). Local options effect the next
@@ -220,12 +216,12 @@ a <code>_vaapi</code> suffix by convention.</p>
 quality. Therefore, I specified <code>-b:v 100M -maxrate:v 120M</code> to aim at quite high
 quality. The highest quality setting on the X-T3 for 4K 25fps is 400Mbs, so it
 might be even worth to experiment with higher settings. Note that there is a
-<a href="https://trac.ffmpeg.org/ticket/7629">bug</a> that requires you to specify a
+<a rel="external" href="https://trac.ffmpeg.org/ticket/7629">bug</a> that requires you to specify a
 maxrate that is not much higher than the wanted bit rate.</p>
 <p>Using VAAPI, I could encode 25 fps in realtime. Unfortunately, 29.97 is already
 too much. That unfortunately also means that my plan to encode a smaller,
 low-quality stream at the same time, also failed.</p>
-<p><a href="https://trac.ffmpeg.org/wiki/Hardware/VAAPI">The FFMPEG VAAPI Wiki
+<p><a rel="external" href="https://trac.ffmpeg.org/wiki/Hardware/VAAPI">The FFMPEG VAAPI Wiki
 Page</a> gives context and many useful
 examples if you want to know more.</p>
 <h2 id="audio-source">Audio source</h2>
@@ -240,25 +236,22 @@ girl-friend insane.</p>
 <h2 id="capture-the-audio-feed">Capture the audio feed</h2>
 <p>This is straight-forward, we just have to specify that we want to use PulseAudio
 (by <code>-f pulse</code>) and specify the device name as input.</p>
-<pre><code>ffmpeg -f pulse -i alsa_input.usb-Elgato_Systems_Cam_Link-03.iec958-stereo capture.mp3
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="plain"><span class="giallo-l"><span>ffmpeg -f pulse -i alsa_input.usb-Elgato_Systems_Cam_Link-03.iec958-stereo capture.mp3</span></span></code></pre>
 <p>We skip compression to save some CPU when we do everything together later on:</p>
-<pre><code>ffmpeg -f pulse -i alsa_input.usb-Elgato_Systems_Cam_Link-03.iec958-stereo \
-    -c:a copy capture.wav
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="plain"><span class="giallo-l"><span>ffmpeg -f pulse -i alsa_input.usb-Elgato_Systems_Cam_Link-03.iec958-stereo \</span></span>
+<span class="giallo-l"><span>    -c:a copy capture.wav</span></span></code></pre>
 <p><code>-c:a copy</code> set the audio codec to <code>copy</code> which skips any audio encoding. In
 this case, it is redundant since the output format doesn't support any special
 codec anyways. It becomes relevant when we combine it with video.</p>
 <h2 id="putting-it-together-doesn-t-work">Putting it together... doesn't work</h2>
 <p>This mostly combines our video/audio examples and adds a <code>-thread_queue_size 2048</code> to allow some generous buffering:</p>
-<pre><code>fmpeg -vaapi_device &#x2F;dev&#x2F;dri&#x2F;renderD128 \
-    -i $V4L_DEVICE \
-    -thread_queue_size 2048 -f pulse -i $PULSE_DEVICE \
-    -vf &#x27;format=nv12,hwupload&#x27; \
-    -c:v hevc_vaapi -b:v 100M -maxrate:v 120M \
-    -acodec copy \
-    output-combined.mkv
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="plain"><span class="giallo-l"><span>fmpeg -vaapi_device /dev/dri/renderD128 \</span></span>
+<span class="giallo-l"><span>    -i $V4L_DEVICE \</span></span>
+<span class="giallo-l"><span>    -thread_queue_size 2048 -f pulse -i $PULSE_DEVICE \</span></span>
+<span class="giallo-l"><span>    -vf &#39;format=nv12,hwupload&#39; \</span></span>
+<span class="giallo-l"><span>    -c:v hevc_vaapi -b:v 100M -maxrate:v 120M \</span></span>
+<span class="giallo-l"><span>    -acodec copy \</span></span>
+<span class="giallo-l"><span>    output-combined.mkv</span></span></code></pre>
 <p>This should be the final section, right? I'd hope so but for me this wasn't true
 at all.</p>
 <p>This might work for you. For me, it also worked once or so. Unfortunately, most
@@ -269,22 +262,21 @@ The video source seems to request key frames doesn't get the expected data
 afterwards. Or something else.</p>
 <h2 id="resetting-the-usb-device-without-unplugging">Resetting the USB device without unplugging</h2>
 <p>That's not nice but can we at least automate it? After some browsing, I found
-this recipe on <a href="https://askubuntu.com/a/61165">Ask Ubuntu</a>:</p>
-<pre data-lang="bash" class="language-bash "><code class="language-bash" data-lang="bash">sudo sh -c &quot;echo 0 &gt; &#x2F;sys&#x2F;bus&#x2F;usb&#x2F;devices&#x2F;1-4.6&#x2F;authorized&quot;
-sudo sh -c &quot;echo 1 &gt; &#x2F;sys&#x2F;bus&#x2F;usb&#x2F;devices&#x2F;1-4.6&#x2F;authorized&quot;
-</code></pre>
-<p>I created two shell scripts </p>
+this recipe on <a rel="external" href="https://askubuntu.com/a/61165">Ask Ubuntu</a>:</p>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #DCDCAA;">sudo</span><span style="color: #CE9178;"> sh</span><span style="color: #569CD6;"> -c</span><span style="color: #CE9178;"> &quot;echo 0 &gt; /sys/bus/usb/devices/1-4.6/authorized&quot;</span></span>
+<span class="giallo-l"><span style="color: #DCDCAA;">sudo</span><span style="color: #CE9178;"> sh</span><span style="color: #569CD6;"> -c</span><span style="color: #CE9178;"> &quot;echo 1 &gt; /sys/bus/usb/devices/1-4.6/authorized&quot;</span></span></code></pre>
+<p>I created two shell scripts</p>
 <ul>
-<li><a href="https://github.com/kolloch/elgato_capture/blob/d5a023d68c7b25727277b8b15e71e19492cbe545/find-elgato4k-sys-dir.sh">find-elgato4k-sys-dir.sh</a>
-to find the right sys directory and </li>
-<li><a href="https://github.com/kolloch/elgato_capture/blob/d5a023d68c7b25727277b8b15e71e19492cbe545/reset.sh">reset.sh</a>
+<li><a rel="external" href="https://github.com/kolloch/elgato_capture/blob/d5a023d68c7b25727277b8b15e71e19492cbe545/find-elgato4k-sys-dir.sh">find-elgato4k-sys-dir.sh</a>
+to find the right sys directory and</li>
+<li><a rel="external" href="https://github.com/kolloch/elgato_capture/blob/d5a023d68c7b25727277b8b15e71e19492cbe545/reset.sh">reset.sh</a>
 to issue these commands and wait for the device to come up again.</li>
 </ul>
 <h2 id="conclusion">Conclusion</h2>
 <p>After calling <code>reset.sh</code>, the combined command works reliably for me. And I have
 a new found respect for the codecs in my camera.</p>
 <p>If you benefitted from this article or, even better, improved upon it, please
-let me know, e.g. <a href="https://twitter.com/pkolloch">on Twitter</a>.</p>
+let me know, e.g. <a rel="external" href="https://twitter.com/pkolloch">on Twitter</a>.</p>
 
     </div>
 

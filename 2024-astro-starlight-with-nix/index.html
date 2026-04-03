@@ -113,80 +113,77 @@
 
     <div class="post-content">
       <p>Recently, I migrated the unwieldy README.md of
-crate2nix to <a href="https://nix-community.github.io/crate2nix/">a much more structured GitHub page</a>. 
+crate2nix to <a rel="external" href="https://nix-community.github.io/crate2nix/">a much more structured GitHub page</a>.
 After some research, I settled on
-<a href="https://astro.build/">Astro</a> with the <a href="https://starlight.astro.build/">Starlight Theme</a>
+<a rel="external" href="https://astro.build/">Astro</a> with the <a rel="external" href="https://starlight.astro.build/">Starlight Theme</a>
 since I had head good things about Astro at the NixCon 2023 in Darmstadt (happy times!).</p>
 <p>This is an especially appealing choice if you want to</p>
 <ul>
 <li>start easy with mostly simple documentation in <code>*.md</code> files, but</li>
-<li>potentially later extend it with some client-side logic with <a href="https://react.dev/">React</a>.</li>
+<li>potentially later extend it with some client-side logic with <a rel="external" href="https://react.dev/">React</a>.</li>
 </ul>
-<p>But on we go! Let's get our GitHub Page up and running. </p>
+<p>But on we go! Let's get our GitHub Page up and running.</p>
 <h2 id="what-you-need-to-get-started">What you need to get started</h2>
 <p>This is a follow up on <a href="../2024-flake-parts-nodejs-devshell">Tutorial: Using flake-parts to set up a nodejs devshell</a>. We assume that you already have set up</p>
 <ul>
-<li>a flake-based project using <a href="https://flake.parts/">flake.parts</a>, and</li>
+<li>a flake-based project using <a rel="external" href="https://flake.parts/">flake.parts</a>, and</li>
 <li>setup a devshell with the right version of <code>npm</code>.</li>
 </ul>
 <h2 id="creating-the-docs-directory">Creating the docs directory</h2>
 <p>Now that we have <code>npm</code> at hand, we can follow the instructions of Starlight
 on how to get started and answer the prompts as they come:</p>
-<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">❯ npm create astro@latest -- --template starlight
-
- astro   Launch sequence initiated.
-
-   dir   Where should we create your new project?
-         .&#x2F;docs
-      ◼  tmpl Using starlight as project template
-
-  deps   Install dependencies?
-         Yes
-
-    ts   Do you plan to write TypeScript?
-         Yes
-
-   use   How strict should TypeScript be?
-         Strict
-
-   git   Initialize a new git repository?
-         No
-      ◼  Sounds good! You can always run git init manually.
-
-      ✔  Project initialized!
-         ■ Template copied
-         ■ Dependencies installed
-         ■ TypeScript customized
-
-  next   Liftoff confirmed. Explore your project!
-
-         Enter your project directory using cd .&#x2F;docs
-         Run npm run dev to start the dev server. CTRL+C to stop.
-         Add frameworks like react or tailwind using astro add.
-
-         Stuck? Join us at https:&#x2F;&#x2F;astro.build&#x2F;chat
-
-╭──🎁─╮  Houston:
-│ ◠ ◡ ◠  Good luck out there, astronaut! 🚀
-╰─────╯
-</code></pre>
-<h2 id="local-development">Local development</h2>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="shellsession"><span class="giallo-l"><span>❯ npm create astro@latest -- --template starlight</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span> astro   Launch sequence initiated.</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>   dir   Where should we create your new project?</span></span>
+<span class="giallo-l"><span>         ./docs</span></span>
+<span class="giallo-l"><span>      ◼  tmpl Using starlight as project template</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>  deps   Install dependencies?</span></span>
+<span class="giallo-l"><span>         Yes</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>    ts   Do you plan to write TypeScript?</span></span>
+<span class="giallo-l"><span>         Yes</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>   use   How strict should TypeScript be?</span></span>
+<span class="giallo-l"><span>         Strict</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>   git   Initialize a new git repository?</span></span>
+<span class="giallo-l"><span>         No</span></span>
+<span class="giallo-l"><span>      ◼  Sounds good! You can always run git init manually.</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>      ✔  Project initialized!</span></span>
+<span class="giallo-l"><span>         ■ Template copied</span></span>
+<span class="giallo-l"><span>         ■ Dependencies installed</span></span>
+<span class="giallo-l"><span>         ■ TypeScript customized</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>  next   Liftoff confirmed. Explore your project!</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>         Enter your project directory using cd ./docs</span></span>
+<span class="giallo-l"><span>         Run npm run dev to start the dev server. CTRL+C to stop.</span></span>
+<span class="giallo-l"><span>         Add frameworks like react or tailwind using astro add.</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>         Stuck? Join us at https://astro.build/chat</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>╭──🎁─╮  Houston:</span></span>
+<span class="giallo-l"><span>│ ◠ ◡ ◠  Good luck out there, astronaut! 🚀</span></span>
+<span class="giallo-l"><span>╰─────╯</span></span></code></pre><h2 id="local-development">Local development</h2>
 <p>For local development, you can use a fast turn-around npm-based
 workflow:</p>
-<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">❯ npm run dev
-
-&gt; docs@0.0.1 dev
-&gt; astro dev
-
-
- astro  v4.1.1 ready in 590 ms
-
-┃ Local    http:&#x2F;&#x2F;localhost:4321&#x2F;
-┃ Network  use --host to expose
-
-23:13:21 [WARN] [content] The i18n collection is defined but no content&#x2F;i18n folder exists in the content directory. Create a new folder for the collection, or check your content configuration file for typos.
-23:13:21 watching for file changes...
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="shellsession"><span class="giallo-l"><span>❯ npm run dev</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>&gt; docs@0.0.1 dev</span></span>
+<span class="giallo-l"><span>&gt; astro dev</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span> astro  v4.1.1 ready in 590 ms</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>┃ Local    http://localhost:4321/</span></span>
+<span class="giallo-l"><span>┃ Network  use --host to expose</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>23:13:21 [WARN] [content] The i18n collection is defined but no content/i18n folder exists in the content directory. Create a new folder for the collection, or check your content configuration file for typos.</span></span>
+<span class="giallo-l"><span>23:13:21 watching for file changes...</span></span></code></pre>
 <p>The exposed web server will update as you edit or
 display any potential errors.</p>
 <p>The <code>npm</code> and <code>node</code> are supplied by nix and all
@@ -197,83 +194,77 @@ have the same version available.</p>
 <p>Let's say we are satisfied with our edits and want a reproducible
 build of our docs. Copy the following as <code>flake-module.nix</code>
 into your docs folder:</p>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix"># docs&#x2F;flake-module.nix
-{
-perSystem = { config, self&#x27;, inputs&#x27;, pkgs, lib, system, ... }: {
-    packages.docs = pkgs.buildNpmPackage {
-      pname = &quot;docs&quot;;
-      version = &quot;0.1.0&quot;;
-
-      inherit (config.packages) nodejs;
-
-      src = .&#x2F;.;
-
-      buildInputs = [
-        pkgs.vips
-      ];
-
-      nativeBuildInputs = [
-        pkgs.pkg-config
-      ];
-
-      installPhase = &#x27;&#x27;
-        runHook preInstall
-        cp -pr --reflink=auto dist $out&#x2F;
-        runHook postInstall
-      &#x27;&#x27;;
-
-      npmDepsHash = &quot;&quot;;
-    };
-  };
-}
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span style="color: #6A9955;"># docs/flake-module.nix</span></span>
+<span class="giallo-l"><span>{</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">perSystem</span><span> = {</span><span style="color: #9CDCFE;"> config</span><span>,</span><span style="color: #9CDCFE;"> self&#39;</span><span>,</span><span style="color: #9CDCFE;"> inputs&#39;</span><span>,</span><span style="color: #9CDCFE;"> pkgs</span><span>,</span><span style="color: #9CDCFE;"> lib</span><span>,</span><span style="color: #9CDCFE;"> system</span><span>, ... }: {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    packages</span><span>.</span><span style="color: #9CDCFE;">docs</span><span> =</span><span style="color: #9CDCFE;"> pkgs</span><span>.</span><span style="color: #9CDCFE;">buildNpmPackage</span><span> {</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">      pname</span><span> =</span><span style="color: #CE9178;"> &quot;docs&quot;</span><span>;</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">      version</span><span> =</span><span style="color: #CE9178;"> &quot;0.1.0&quot;</span><span>;</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #569CD6;">      inherit</span><span> (</span><span style="color: #9CDCFE;">config</span><span>.</span><span style="color: #9CDCFE;">packages</span><span>)</span><span style="color: #9CDCFE;"> nodejs</span><span>;</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">      src</span><span> =</span><span style="color: #CE9178;"> ./.</span><span>;</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">      buildInputs</span><span> = [</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">        pkgs</span><span>.</span><span style="color: #9CDCFE;">vips</span></span>
+<span class="giallo-l"><span>      ];</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">      nativeBuildInputs</span><span> = [</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">        pkgs</span><span>.</span><span style="color: #9CDCFE;">pkg-config</span></span>
+<span class="giallo-l"><span>      ];</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">      installPhase</span><span> =</span><span style="color: #CE9178;"> &#39;&#39;</span></span>
+<span class="giallo-l"><span style="color: #CE9178;">        runHook preInstall</span></span>
+<span class="giallo-l"><span style="color: #CE9178;">        cp -pr --reflink=auto dist $out/</span></span>
+<span class="giallo-l"><span style="color: #CE9178;">        runHook postInstall</span></span>
+<span class="giallo-l"><span style="color: #CE9178;">      &#39;&#39;</span><span>;</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">      npmDepsHash</span><span> =</span><span style="color: #CE9178;"> &quot;&quot;</span><span>;</span></span>
+<span class="giallo-l"><span>    };</span></span>
+<span class="giallo-l"><span>  };</span></span>
+<span class="giallo-l"><span>}</span></span></code></pre>
 <p>You remember our drill from the last article? You have to
 add the new <code>./docs/flake-module.nix</code> to the imports
 in your <code>flake.nix</code> and ensure that all relevant files
 have been added to the git index with <code>git add</code>.</p>
 <p>You can now try to build your docs like this:</p>
-<pre data-lang="bash" class="language-bash "><code class="language-bash" data-lang="bash">nix build -L .#docs
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #DCDCAA;">nix</span><span style="color: #CE9178;"> build</span><span style="color: #569CD6;"> -L</span><span style="color: #CE9178;"> .#docs</span></span></code></pre>
 <p>Did you notice the empty string for the <code>npmDepsHash</code>
 before? Well, now nix will complain about this while also
 telling us the expected value:</p>
-<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">...
-warning: found empty hash, assuming &#x27;sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=&#x27;
-error: hash mismatch in fixed-output derivation &#x27;&#x2F;nix&#x2F;store&#x2F;mpnydavlxdww9fv2n2aic5mwnapnch7f-docs-0.1.0-npm-deps.drv&#x27;:
-         specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
-            got:    sha256-iyz7+GeVYNDa0cLlz8PGmTNAQVetnt87ndfP0vUjxLw=
-error: 1 dependencies of derivation &#x27;&#x2F;nix&#x2F;store&#x2F;dcrayn9gy58hk0raq53ssca3h2js3alp-docs-0.1.0.drv&#x27; failed to build
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="shellsession"><span class="giallo-l"><span>...</span></span>
+<span class="giallo-l"><span>warning: found empty hash, assuming &#39;sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=&#39;</span></span>
+<span class="giallo-l"><span>error: hash mismatch in fixed-output derivation &#39;/nix/store/mpnydavlxdww9fv2n2aic5mwnapnch7f-docs-0.1.0-npm-deps.drv&#39;:</span></span>
+<span class="giallo-l"><span>         specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</span></span>
+<span class="giallo-l"><span>            got:    sha256-iyz7+GeVYNDa0cLlz8PGmTNAQVetnt87ndfP0vUjxLw=</span></span>
+<span class="giallo-l"><span>error: 1 dependencies of derivation &#39;/nix/store/dcrayn9gy58hk0raq53ssca3h2js3alp-docs-0.1.0.drv&#39; failed to build</span></span></code></pre>
 <p>We'll update <code>npmDepsHash</code> accordingly in our <code>flake-module.nix</code>:</p>
-<pre data-lang="nix" class="language-nix "><code class="language-nix" data-lang="nix">{
-  # ...
-      npmDepsHash = &quot;sha256-iyz7+GeVYNDa0cLlz8PGmTNAQVetnt87ndfP0vUjxLw=&quot;;
-  # ...
-}
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="nix"><span class="giallo-l"><span>{</span></span>
+<span class="giallo-l"><span style="color: #6A9955;">  # ...</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">      npmDepsHash</span><span> =</span><span style="color: #CE9178;"> &quot;sha256-iyz7+GeVYNDa0cLlz8PGmTNAQVetnt87ndfP0vUjxLw=&quot;</span><span>;</span></span>
+<span class="giallo-l"><span style="color: #6A9955;">  # ...</span></span>
+<span class="giallo-l"><span>}</span></span></code></pre>
 <p>NOTE: Your hash value will be different if any of the dependencies have
 a new version in the starlight template! Use the hash that nix has
-output behind &quot;got.&quot;</p>
+output behind "got."</p>
 <p>Now <code>nix build .#docs</code> should build your docs, store them in the <code>/nix/store</code>
 and provide a symlink called <code>result</code> to them:</p>
-<pre data-lang="console" class="language-console "><code class="language-console" data-lang="console">❯ ls -al result&#x2F;
-total 72
-dr-xr-xr-x      9 root  wheel       288 Jan  1  1970 .
-drwxrwxr-t@ 65535 root  nixbld  5130176 Jan 11 23:33 ..
--r--r--r--      1 root  wheel      8474 Jan  1  1970 404.html
-dr-xr-xr-x     10 root  wheel       320 Jan  1  1970 _astro
--r--r--r--      1 root  wheel       696 Jan  1  1970 favicon.svg
-dr-xr-xr-x      3 root  wheel        96 Jan  1  1970 guides
--r--r--r--      1 root  wheel     17758 Jan  1  1970 index.html
-dr-xr-xr-x     14 root  wheel       448 Jan  1  1970 pagefind
-dr-xr-xr-x      3 root  wheel        96 Jan  1  1970 reference
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="shellsession"><span class="giallo-l"><span>❯ ls -al result/</span></span>
+<span class="giallo-l"><span>total 72</span></span>
+<span class="giallo-l"><span>dr-xr-xr-x      9 root  wheel       288 Jan  1  1970 .</span></span>
+<span class="giallo-l"><span>drwxrwxr-t@ 65535 root  nixbld  5130176 Jan 11 23:33 ..</span></span>
+<span class="giallo-l"><span>-r--r--r--      1 root  wheel      8474 Jan  1  1970 404.html</span></span>
+<span class="giallo-l"><span>dr-xr-xr-x     10 root  wheel       320 Jan  1  1970 _astro</span></span>
+<span class="giallo-l"><span>-r--r--r--      1 root  wheel       696 Jan  1  1970 favicon.svg</span></span>
+<span class="giallo-l"><span>dr-xr-xr-x      3 root  wheel        96 Jan  1  1970 guides</span></span>
+<span class="giallo-l"><span>-r--r--r--      1 root  wheel     17758 Jan  1  1970 index.html</span></span>
+<span class="giallo-l"><span>dr-xr-xr-x     14 root  wheel       448 Jan  1  1970 pagefind</span></span>
+<span class="giallo-l"><span>dr-xr-xr-x      3 root  wheel        96 Jan  1  1970 reference</span></span></code></pre>
 <p>Woooo! Our docs!</p>
 <h2 id="gitignore">.gitignore</h2>
-<p>Well, when committing our changes, we'll see the &quot;result&quot; symlink.</p>
+<p>Well, when committing our changes, we'll see the "result" symlink.</p>
 <p>We should add it to <code>.gitignore</code>:</p>
-<pre data-lang="bash" class="language-bash "><code class="language-bash" data-lang="bash">echo &quot;result*&quot; &gt;&gt;.gitignore
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #DCDCAA;">echo</span><span style="color: #CE9178;"> &quot;result*&quot;</span><span> &gt;&gt;</span><span style="color: #CE9178;">.gitignore</span></span></code></pre>
 <p>The star makes it also cover builds with multiple results.</p>
 <p>Why didn't we create a <code>.gitignore</code> for the <code>npm_modules</code> etc? It
 was already done for us by the starlight template.</p>
@@ -281,8 +272,8 @@ was already done for us by the starlight template.</p>
 <p>It was easy to build our Starlight page with nix.
 But this is mostly useful, if we also deploy it somewhere!</p>
 <p>Let's do that in the next episode of this tutorial.</p>
-<p>Feel free to give me feedback/ask questions at <a href="https://discourse.nixos.org/t/tutorial-using-flake-parts-to-set-up-a-nodejs-devshell/37940">discourse</a> or in a
-<a href="https://github.com/kolloch/blog.eigenvalue.net/issues">GitHub issue</a>. I want
+<p>Feel free to give me feedback/ask questions at <a rel="external" href="https://discourse.nixos.org/t/tutorial-using-flake-parts-to-set-up-a-nodejs-devshell/37940">discourse</a> or in a
+<a rel="external" href="https://github.com/kolloch/blog.eigenvalue.net/issues">GitHub issue</a>. I want
 to hear your thoughts: so feel free to err on the side of commenting too much.</p>
 
     </div>

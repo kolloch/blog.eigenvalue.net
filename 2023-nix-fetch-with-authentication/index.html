@@ -113,19 +113,19 @@
 
     <div class="post-content">
       <p>In <a href="/2023-nix-for-private-binaries/">our quest</a> to establish
-<a href="https://nixos.org">Nix</a> for distributing developer toolchains, we depend also
+<a rel="external" href="https://nixos.org">Nix</a> for distributing developer toolchains, we depend also
 on private, company-specific tools. We do not want to nixify every build but
 simply fetch the existing build artifacts using GitLab authentication.</p>
 <p>This might not be exactly what you need but I assume it is incredibly common to
 want to fetch artifacts from some authenticated API.</p>
-<p>I discussed this with <a href="https://twitter.com/ericson2314_">John Ericson</a> and he
+<p>I discussed this with <a rel="external" href="https://twitter.com/ericson2314_">John Ericson</a> and he
 gave me some pointers to current work in progress or proposals that might be
 related. Thank you!</p>
 <p>Not exactly being familiar with core Nix development, the impact of these issues
 is not always easy for me to understand. Therefore, I thought it might also help
 others if I published the notes while reading through the suggested material.</p>
 <h2 id="nix-store-acls">Nix Store ACLs</h2>
-<p>Reference: <a href="https://github.com/NixOS/rfcs/pull/143">RFC 0143</a></p>
+<p>Reference: <a rel="external" href="https://github.com/NixOS/rfcs/pull/143">RFC 0143</a></p>
 <blockquote>
 <p>Implement a way to only allow user access to a store path if they provide
 proof that they have all the necessary sources available, or had the access
@@ -137,24 +137,24 @@ what we want: This is about restricting access to parts of a store -- not being
 more permissive.</p>
 <p>But, could we not require substitution of all private artifacts? I.e. ensure
 that all private artifacts are available in our shared Nix store (cache)? The
-fetches would just be &quot;Fixed Output Derivations&quot;, meaning that they already
+fetches would just be "Fixed Output Derivations", meaning that they already
 specify the hash of the fetched artifact, and before attempting the fetch our
 nix client would check if it is already available in the cache.</p>
 <p>This would not even require this RFC but simply a private Nix store, in our case
 via AWS S3.</p>
 <p>I have some concerns:</p>
 <ol>
-<li>The fetching &quot;builder code&quot; would be misleading since the intention is that it
+<li>The fetching "builder code" would be misleading since the intention is that it
 would never be executed. I vaguely remember there is a construct in
-<a href="https://github.com/NixOS/nixpkgs/">Nixpkgs</a> that models &quot;you need to download
-this independently and upload it to your store&quot;, so that could be remedied.</li>
+<a rel="external" href="https://github.com/NixOS/nixpkgs/">Nixpkgs</a> that models "you need to download
+this independently and upload it to your store", so that could be remedied.</li>
 <li>Someone or something would still need to get access to the artifact and
 upload it to the shared store. That might be relatively easy to achieve (e.g.
 by putting the upload into the CI/CD pipeline of the binary) or difficult,
 depending as so often on the context. For us, it would be acceptable, even
 though I'd like to keep the CI/CD pipelines untouched for now so that the nix
 related changes keep in a few isolated repos.</li>
-<li>I conceptualize the AWS S3 Store that we set up as &quot;cache&quot; that does not need
+<li>I conceptualize the AWS S3 Store that we set up as "cache" that does not need
 to be backed up etc. The requirement of always having all private binaries
 available there, would invalidate that.</li>
 </ol>
@@ -174,29 +174,29 @@ bootstrapping publicly and all the rest only privately.</p>
 <p>But all in all, it looks quite complicated to pull off and is not a good match
 for our needs, I think.</p>
 <h2 id="builtin-fetching-should-be-represented-by-derivations">Builtin fetching should be represented by derivations</h2>
-<p>Reference: <a href="https://github.com/NixOS/nix/issues/9077">Nix Github Issue #9077</a></p>
-<p>Currently, there are two fundamental different ways of &quot;fetching&quot;:</p>
+<p>Reference: <a rel="external" href="https://github.com/NixOS/nix/issues/9077">Nix Github Issue #9077</a></p>
+<p>Currently, there are two fundamental different ways of "fetching":</p>
 <ol>
 <li>
-<p>&quot;built-in fetchers&quot; (libfetchers): These are functions of &quot;Nix the language&quot; and are
+<p>"built-in fetchers" (libfetchers): These are functions of "Nix the language" and are
 executed directly while evaluating the build tree.</p>
 </li>
 <li>
-<p>&quot;fixed-output derivation fetchers&quot;: Nix allows them to access the network by
+<p>"fixed-output derivation fetchers": Nix allows them to access the network by
 virtue of an easily verifiable promise. FODs need to specify the hash of
 their output upfront.</p>
 </li>
 </ol>
 <p>This has some indirect consequences which is why, depending on their needs,
 prefer one over the other.</p>
-<p>&quot;Built-in&quot; fetchers run wherever the Nix expressions are evaluated - in the
+<p>"Built-in" fetchers run wherever the Nix expressions are evaluated - in the
 environment of the user that invoked the build. That has an immediate
 application for us: If the user is authenticated, the fetcher also has
 access to the associated credentials!</p>
 <p>Yet, it also requires that we have an appropriate fetcher directly built into
 Nix, which makes this weirdly inflexible: The built-in fetchers do not e.g.
 allow setting an authentication header from an environment variable. That makes
-it impossible fetching job artifacts via <a href="https://gitlab.com/gitlab-org/gitlab/-/issues/341157">the GitLab API that does not allow
+it impossible fetching job artifacts via <a rel="external" href="https://gitlab.com/gitlab-org/gitlab/-/issues/341157">the GitLab API that does not allow
 basic authentication</a>
 which would be supported via credentials via the <del>insanely limited, not even
 supporting passwords with spaces</del> time-proven <code>netrc</code> mechanism.</p>
@@ -205,7 +205,7 @@ supporting passwords with spaces</del> time-proven <code>netrc</code> mechanism.
 e.g. builtin-fetchers are only executed one by one and not in parallel with
 derivations. This is what the issues strives to fix that and more (I believe).
 That is really cool!</p>
-<p>I am not clear, though, <a href="https://github.com/NixOS/nix/issues/9077#issuecomment-1817861537">if this would mean that the built-in fetchers would
+<p>I am not clear, though, <a rel="external" href="https://github.com/NixOS/nix/issues/9077#issuecomment-1817861537">if this would mean that the built-in fetchers would
 still be executed by the build
 client</a>, e.g.
 the user that called <code>nix build</code>. Let's assume that in good faith for now,
@@ -239,10 +239,10 @@ way that would allow executing these fetches in parallel but on the client is
 not really trivial.</p>
 <p>BTW, built-in fetchers have other super powers (e.g. not necessarily
 requiring an output hash but simply a git hash) and FODs have some other problems
-(e.g. <a href="https://blog.eigenvalue.net/nix-rerunning-fixed-output-derivations/">being unwantedly substituted when the URL but not the hash is
+(e.g. <a rel="external" href="https://blog.eigenvalue.net/nix-rerunning-fixed-output-derivations/">being unwantedly substituted when the URL but not the hash is
 changed</a>).</p>
 <h2 id="optional-client-side-building">Optional client-side building</h2>
-<p>Reference: <a href="https://github.com/NixOS/nix/issues/9344">Nix Github Issue #9344</a></p>
+<p>Reference: <a rel="external" href="https://github.com/NixOS/nix/issues/9344">Nix Github Issue #9344</a></p>
 <blockquote>
 <ol>
 <li>For fixed output derivations that need authentication, it is probably
@@ -268,7 +268,7 @@ follow for me:</p>
 also provide a bike system view.</li>
 </ol>
 </blockquote>
-<p>I assume that he means &quot;build system view&quot; but <a href="https://github.com/NixOS/nix/issues/9344#issuecomment-1817868871">I can't follow the relationship to
+<p>I assume that he means "build system view" but <a rel="external" href="https://github.com/NixOS/nix/issues/9344#issuecomment-1817868871">I can't follow the relationship to
 the SQLite database</a>.</p>
 <h2 id="conclusion">Conclusion</h2>
 <p>It was interesting to learn about the different proposals. Some of them would be
@@ -276,7 +276,7 @@ awesome improvements, the last one would nearly solve my problem.</p>
 <p>Short term I see the following possibilities for allowing private fetches from
 GitLab:</p>
 <ol>
-<li>Patching nix or writing a plugin so that I can use a more flexible <a href="https://nixos.org/manual/nix/stable/language/builtins.html#builtins-fetchurl">fetchurl
+<li>Patching nix or writing a plugin so that I can use a more flexible <a rel="external" href="https://nixos.org/manual/nix/stable/language/builtins.html#builtins-fetchurl">fetchurl
 built-in</a>
 that supports setting headers from environment variables. That would allow me
 to pass credentials without somehow having them end up in the store.</li>
@@ -284,18 +284,18 @@ to pass credentials without somehow having them end up in the store.</li>
 GitLab API token to the builder.</li>
 </ol>
 <p>The second one could be easily achieved by similar means as described
-<a href="https://blog.eigenvalue.net/2023-nix-s3-store-authentication/">here</a>: E.g.
+<a rel="external" href="https://blog.eigenvalue.net/2023-nix-s3-store-authentication/">here</a>: E.g.
 allowing trusted clients to change allowlisted environment variables in the
 builder. Since that is not possible yet and requires further discussion, I
 implemented a hacky way to do that in our internal PoC. I might write a separate
 blog post about that!</p>
-<p>If you want to know more about my current journey and context, check out <a href="https://blog.eigenvalue.net/2023-nix-for-private-binaries/">Nix:
+<p>If you want to know more about my current journey and context, check out <a rel="external" href="https://blog.eigenvalue.net/2023-nix-for-private-binaries/">Nix:
 Distributing private/public
 binaries</a>.</p>
 <p>Noticed a mistake? Want to discuss something with me? Feel free to
-<a href="https://discourse.nixos.org/t/nix-authenticated-fetches-from-gitlab-reading-about-related-work/35708.">discuss</a></p>
-<p>Alos, feel free to get in touch with me with the information shared on <a href="https://github.com/kolloch">my
-GitHub profile kolloch</a> or <a href="https://twitter.com/pkolloch">Twitter
+<a rel="external" href="https://discourse.nixos.org/t/nix-authenticated-fetches-from-gitlab-reading-about-related-work/35708.">discuss</a></p>
+<p>Alos, feel free to get in touch with me with the information shared on <a rel="external" href="https://github.com/kolloch">my
+GitHub profile kolloch</a> or <a rel="external" href="https://twitter.com/pkolloch">Twitter
 @pkolloch</a>.</p>
 
     </div>

@@ -117,7 +117,7 @@ writing this, definitely not easy! (Please, please prove me wrong!)</p>
 <p>At the end of this article I'll make a pragmatic proposal that should be quite
 easy to implement and improve the user experience significantly.</p>
 <h2 id="stores-what-s-possible-today">Stores: What's possible today?</h2>
-<p>&quot;Stores&quot; store build results and allow you <a href="https://nixos.org/manual/nix/stable/package-management/sharing-packages">to share them between
+<p>"Stores" store build results and allow you <a rel="external" href="https://nixos.org/manual/nix/stable/package-management/sharing-packages">to share them between
 machines</a>.</p>
 <p>You can copy packages (store paths) with their transitive dependencies (closure)
 between machines explicitly, e.g. with <code>nix copy</code> or <code>nix-copy-closure</code>.</p>
@@ -134,8 +134,8 @@ available for download.</p>
 </li>
 <li>
 <p>AWS S3. Uses the AWS SDK's
-<a href="https://github.com/NixOS/nix/blob/458e511dc41dd1726a42f001fa34222b3ab9223a/src/libstore/s3-binary-cache-store.cc#L96-L109"><code>Aws::Auth::AWSCredentialsProvider</code></a>
-which e.g. <a href="https://sdk.amazonaws.com/cpp/api/LATEST/aws-cpp-sdk-core/html/md_docs_2_credentials___providers.html">search for credentials in environment variables and configuration
+<a rel="external" href="https://github.com/NixOS/nix/blob/458e511dc41dd1726a42f001fa34222b3ab9223a/src/libstore/s3-binary-cache-store.cc#L96-L109"><code>Aws::Auth::AWSCredentialsProvider</code></a>
+which e.g. <a rel="external" href="https://sdk.amazonaws.com/cpp/api/LATEST/aws-cpp-sdk-core/html/md_docs_2_credentials___providers.html">search for credentials in environment variables and configuration
 files</a>.</p>
 </li>
 </ul>
@@ -166,7 +166,7 @@ setting.</li>
 your net-rc file.</li>
 </ol>
 <p>Passing the config to the nix-daemon is implemented via daemon op
-<a href="https://github.com/NixOS/nix/blob/458e511dc41dd1726a42f001fa34222b3ab9223a/src/libstore/daemon.cc#L723C26-L758C6">SetOptions</a>
+<a rel="external" href="https://github.com/NixOS/nix/blob/458e511dc41dd1726a42f001fa34222b3ab9223a/src/libstore/daemon.cc#L723C26-L758C6">SetOptions</a>
 which changes the <code>Settings</code> globally. That is fine, because the nix-daemon is
 forked for every connection.</p>
 <p>What are the problems?</p>
@@ -216,18 +216,14 @@ that later).</p>
 <li>
 <p>In the nix-daemon: <code>allowed-env-variables-from-trusted-client</code> as a list of
 environment variables that may be set from a trusted client. E.g.:</p>
-<pre data-lang="plain" class="language-plain "><code class="language-plain" data-lang="plain">allowed-env-variables-from-trusted-client = AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION
-</code></pre>
-</li>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="plain"><span class="giallo-l"><span>allowed-env-variables-from-trusted-client = AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION</span></span></code></pre></li>
 <li>
 <p>For the nix client: <code>pass-env-variables</code> as a list of environment variables
 that are passed whenever a connection to the nix-daemon is opened. E.g.:</p>
-<pre data-lang="plain" class="language-plain "><code class="language-plain" data-lang="plain">pass-env-variables = AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION
-</code></pre>
-</li>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="plain"><span class="giallo-l"><span>pass-env-variables = AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION</span></span></code></pre></li>
 </ol>
 <p>If a client has valid AWS environment variables, this will make it just work,
-even with temporary credentials. </p>
+even with temporary credentials.</p>
 <ul>
 <li>
 <p><code>nix copy</code> / <code>nix build</code> will just both work after adding a few standard
@@ -255,14 +251,14 @@ change in that case.</p>
 </ol>
 <h2 id="conclusion">Conclusion</h2>
 <p>I can definitely think of other solutions here but this seems to have the right
-mix of &quot;good enough&quot;, &quot;not too specialized&quot; and &quot;easy to implement.&quot;</p>
+mix of "good enough", "not too specialized" and "easy to implement."</p>
 <p>I might be wrong, though, and would love to hear your thoughts!</p>
-<p>If you want to know more about my current journey and context, check out <a href="https://blog.eigenvalue.net/2023-nix-for-private-binaries/">Nix:
+<p>If you want to know more about my current journey and context, check out <a rel="external" href="https://blog.eigenvalue.net/2023-nix-for-private-binaries/">Nix:
 Distributing private/public
 binaries</a>.</p>
 <p>Feel free to get in touch
 with me with the information shared on my GitHub profile:
-<a href="https://github.com/kolloch">kolloch</a></p>
+<a rel="external" href="https://github.com/kolloch">kolloch</a></p>
 
     </div>
 

@@ -112,9 +112,9 @@
     </header>
 
     <div class="post-content">
-      <p>In my workflow with <a href="https://git-scm.com/">Git</a>, I prefer using SSH
-authentication for platforms like <a href="https://github.com">GitHub</a> and
-<a href="https://gitlab.com">GitLab</a>. It allows me to avoid saving multiple credentials
+      <p>In my workflow with <a rel="external" href="https://git-scm.com/">Git</a>, I prefer using SSH
+authentication for platforms like <a rel="external" href="https://github.com">GitHub</a> and
+<a rel="external" href="https://gitlab.com">GitLab</a>. It allows me to avoid saving multiple credentials
 on my machine; instead, I simply register my already existing public SSH key in
 my account settings. It seems like a clear victory, right?</p>
 <p>Unfortunately, it's not a one-size-fits-all solution:</p>
@@ -132,11 +132,10 @@ Git. You can actually substitute the visible URLs of remote repositories based
 on their prefixes! This means that you can use SSH for local development and
 HTTPS for CI environments without having to manually switch back and forth.</p>
 <p>Here's how to do it:</p>
-<pre data-lang="toml" class="language-toml "><code class="language-toml" data-lang="toml">[url &quot;ssh:&#x2F;&#x2F;git@github.com&#x2F;&quot;]
-    insteadOf = https:&#x2F;&#x2F;github.com&#x2F;
-[url &quot;ssh:&#x2F;&#x2F;git@gitlab.com&#x2F;&quot;]
-    insteadOf = https:&#x2F;&#x2F;gitlab.com&#x2F;
-</code></pre>
+<pre class="giallo" style="color: #D4D4D4; background-color: #1E1E1E;"><code data-lang="toml"><span class="giallo-l"><span>[url &quot;ssh://git@github.com/&quot;]</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    insteadOf</span><span> = h</span><span style="color: #F44747;">ttps://github.com/</span></span>
+<span class="giallo-l"><span>[url &quot;ssh://git@gitlab.com/&quot;]</span></span>
+<span class="giallo-l"><span style="color: #9CDCFE;">    insteadOf</span><span> = h</span><span style="color: #F44747;">ttps://gitlab.com/</span></span></code></pre>
 <p>This config ensures that every time you try to interact with a remote URL that
 starts with <code>https://github.com/</code> or <code>https://gitlab.com/</code>, Git will substitute
 it with the corresponding SSH URL. This means you can continue using HTTPS URLs

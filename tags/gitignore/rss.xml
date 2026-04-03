@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Peter Kolloch - Blog - gitignore</title>
+      <link>https://blog.eigenvalue.net</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.eigenvalue.net/tags/gitignore/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Sun, 10 Dec 2023 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>.gitignore: Project vs Global Ignore Patterns</title>
+          <pubDate>Sun, 10 Dec 2023 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/2023-user-vs-project-gitignore/</link>
+          <guid>https://blog.eigenvalue.net/2023-user-vs-project-gitignore/</guid>
+          <description xml:base="https://blog.eigenvalue.net/2023-user-vs-project-gitignore/">&lt;p&gt;Global &lt;code&gt;.gitignore&lt;&#x2F;code&gt; files?&lt;&#x2F;p&gt;
+&lt;p&gt;Recently, I wanted to add Mac OS finder&#x27;s &lt;code&gt;.DS_Store&lt;&#x2F;code&gt; files to a project&#x27;s
+.gitignore. A reviewer immediately objected to this: &quot;This should be added to
+the user&#x27;s ignore file, not the project&#x27;s.&quot;&lt;&#x2F;p&gt;
+&lt;p&gt;Huh! I didn&#x27;t even know that existed!&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;global-gitignore&quot;&gt;&quot;Global&quot; .gitignore&lt;&#x2F;h2&gt;
+&lt;p&gt;If you have a look at &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;git-scm.com&#x2F;docs&#x2F;gitignore&quot;&gt;git&#x27;s .gitignore
+documentation&lt;&#x2F;a&gt;, you&#x27;ll see that there are
+four sources of ignore patterns that &lt;code&gt;git&lt;&#x2F;code&gt; considers:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;from command line flags, where applicable,&lt;&#x2F;li&gt;
+&lt;li&gt;from &lt;code&gt;.gitignore&lt;&#x2F;code&gt; files in project directories,&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;.git&#x2F;info&#x2F;exclude&lt;&#x2F;code&gt; in the project directory,&lt;&#x2F;li&gt;
+&lt;li&gt;AND, tadaah, I didn&#x27;t know about that at all: from a file specified in the
+&lt;code&gt;core.excludesFile&lt;&#x2F;code&gt; option.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;While there is not a standard place for a &quot;global&quot; gitignore file, you can add
+one to your &quot;global&quot; user git config. Here you can specify ignore patterns for
+all your git projects.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;does-it-make-sense&quot;&gt;Does it make sense?&lt;&#x2F;h2&gt;
+&lt;p&gt;Now back to the reviewer&#x27;s objection: Does it make sense to use a global
+gitignore file for platform-specific files such as &lt;code&gt;.DS_Store&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;You could argue:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Total work: If everyone puts the relevant files into their global gitignore
+files, then we don&#x27;t have to put them into project-specific gitignore
+files. There are more projects than developer machines, so that is a clear
+win.&lt;&#x2F;li&gt;
+&lt;li&gt;Minimal: People using Linux or Windows will not suffer from too many ignored
+patterns.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;h2 id=&quot;wrong&quot;&gt;Wrong&lt;&#x2F;h2&gt;
+&lt;p&gt;Ok, not formally wrong but in my opinion irrelevant. So wrong in the typical
+blog post way of things ;). If you assumed that everyone has a proper global
+gitignore file, then you&#x27;d have to&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Be annoyed about &lt;code&gt;.DS_Store&lt;&#x2F;code&gt; files occasionally sneaking into your merge requests,&lt;&#x2F;li&gt;
+&lt;li&gt;Educate people about its existence, and&lt;&#x2F;li&gt;
+&lt;li&gt;Maybe argue about the best way.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Instead, if there is no danger that your project will ever want to check in
+&lt;code&gt;.DS_Store&lt;&#x2F;code&gt; files, you can just add one or two additional patterns to the
+project &lt;code&gt;.gitignore&lt;&#x2F;code&gt; file and be done with it.&lt;&#x2F;p&gt;
+&lt;p&gt;Simplify your life!&lt;&#x2F;p&gt;
+&lt;p&gt;I am guilty with creating many long&#x2F;messy &lt;code&gt;.gitignore&lt;&#x2F;code&gt; files, adding stuff to
+them whenever opportune. I never regretted that. But I WAS occasionally annoyed missing
+&lt;code&gt;.gitignore&lt;&#x2F;code&gt; patterns.&lt;&#x2F;p&gt;
+&lt;p&gt;I never struggled from too many ignore patterns. They always just work fine.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h2&gt;
+&lt;p&gt;We spend a lot of effort to make it easy to onboard new developers to projects.
+Or at least we should, if we want collaboration. Instead of longer onboarding
+guides with what tools to set up, I prefer tools like &lt;code&gt;nix&lt;&#x2F;code&gt; or any other way to
+specify toolchain versions etc.&lt;&#x2F;p&gt;
+&lt;p&gt;Why then, should we make assumptions about the setup of developer machines where
+we can do without?&lt;&#x2F;p&gt;
+&lt;p&gt;Make your project friendly to developers of different platforms and let them
+include &lt;code&gt;.gitignore&lt;&#x2F;code&gt; patterns that apply to their OS, their tools, their editors.&lt;&#x2F;p&gt;
+&lt;p&gt;Obviously, this is my opinion and I&#x27;d love to find out if you disagree! Maybe I
+have missed an important aspect? Feel free to get in touch with me with the
+information shared on my GitHub profile: &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&quot;&gt;kolloch&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+</description>
+      </item>
+    </channel>
+</rss>

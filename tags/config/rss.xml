@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Peter Kolloch - Blog - config</title>
+      <link>https://blog.eigenvalue.net</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.eigenvalue.net/tags/config/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Tue, 01 Aug 2023 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>Git: Using SSH Locally, But HTTPS in CI</title>
+          <pubDate>Tue, 01 Aug 2023 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/git-ssh-insteadof-https/</link>
+          <guid>https://blog.eigenvalue.net/git-ssh-insteadof-https/</guid>
+          <description xml:base="https://blog.eigenvalue.net/git-ssh-insteadof-https/">&lt;p&gt;In my workflow with &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;git-scm.com&#x2F;&quot;&gt;Git&lt;&#x2F;a&gt;, I prefer using SSH
+authentication for platforms like &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&quot;&gt;GitHub&lt;&#x2F;a&gt; and
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;gitlab.com&quot;&gt;GitLab&lt;&#x2F;a&gt;. It allows me to avoid saving multiple credentials
+on my machine; instead, I simply register my already existing public SSH key in
+my account settings. It seems like a clear victory, right?&lt;&#x2F;p&gt;
+&lt;p&gt;Unfortunately, it&#x27;s not a one-size-fits-all solution:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Recently, I encountered an issue that could be easily resolved using Git
+submodules in GitLab CI. GitLab has the ability to automatically check out
+submodules, albeit only if they are referenced using their HTTPS URLs.&lt;&#x2F;li&gt;
+&lt;li&gt;The convenience of copying and pasting HTTPS URLs of GitLab&#x2F;GitHub
+repositories directly into your &lt;code&gt;git clone&lt;&#x2F;code&gt; command is undeniable. I&#x27;ve been
+guilty of lazily using these HTTPS URLs when I assumed I&#x27;d only need read-only
+access, only to later realize that I had to switch them over to SSH URLs...&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;However, to my surprise, I discovered the following configuration options in
+Git. You can actually substitute the visible URLs of remote repositories based
+on their prefixes! This means that you can use SSH for local development and
+HTTPS for CI environments without having to manually switch back and forth.&lt;&#x2F;p&gt;
+&lt;p&gt;Here&#x27;s how to do it:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;toml&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[url &amp;quot;ssh:&#x2F;&#x2F;git@github.com&#x2F;&amp;quot;]&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    insteadOf&lt;&#x2F;span&gt;&lt;span&gt; = h&lt;&#x2F;span&gt;&lt;span style=&quot;color: #F44747;&quot;&gt;ttps:&#x2F;&#x2F;github.com&#x2F;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[url &amp;quot;ssh:&#x2F;&#x2F;git@gitlab.com&#x2F;&amp;quot;]&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    insteadOf&lt;&#x2F;span&gt;&lt;span&gt; = h&lt;&#x2F;span&gt;&lt;span style=&quot;color: #F44747;&quot;&gt;ttps:&#x2F;&#x2F;gitlab.com&#x2F;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This config ensures that every time you try to interact with a remote URL that
+starts with &lt;code&gt;https:&#x2F;&#x2F;github.com&#x2F;&lt;&#x2F;code&gt; or &lt;code&gt;https:&#x2F;&#x2F;gitlab.com&#x2F;&lt;&#x2F;code&gt;, Git will substitute
+it with the corresponding SSH URL. This means you can continue using HTTPS URLs
+in your &lt;code&gt;.gitmodules&lt;&#x2F;code&gt; file, but when you clone or pull locally, it will use SSH.
+It also works for &lt;code&gt;git clone&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;I have no idea how I missed this feature before, but it&#x27;s certainly a quality of
+life improvement.&lt;&#x2F;p&gt;
+</description>
+      </item>
+    </channel>
+</rss>

@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Peter Kolloch - Blog - fetch</title>
+      <link>https://blog.eigenvalue.net</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.eigenvalue.net/tags/fetch/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Sun, 19 Nov 2023 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>Nix: Authenticated Fetches from GitLab - Reading about Related Work</title>
+          <pubDate>Sun, 19 Nov 2023 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/2023-nix-fetch-with-authentication/</link>
+          <guid>https://blog.eigenvalue.net/2023-nix-fetch-with-authentication/</guid>
+          <description xml:base="https://blog.eigenvalue.net/2023-nix-fetch-with-authentication/">&lt;p&gt;In &lt;a href=&quot;&#x2F;2023-nix-for-private-binaries&#x2F;&quot;&gt;our quest&lt;&#x2F;a&gt; to establish
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;nixos.org&quot;&gt;Nix&lt;&#x2F;a&gt; for distributing developer toolchains, we depend also
+on private, company-specific tools. We do not want to nixify every build but
+simply fetch the existing build artifacts using GitLab authentication.&lt;&#x2F;p&gt;
+&lt;p&gt;This might not be exactly what you need but I assume it is incredibly common to
+want to fetch artifacts from some authenticated API.&lt;&#x2F;p&gt;
+&lt;p&gt;I discussed this with &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;ericson2314_&quot;&gt;John Ericson&lt;&#x2F;a&gt; and he
+gave me some pointers to current work in progress or proposals that might be
+related. Thank you!&lt;&#x2F;p&gt;
+&lt;p&gt;Not exactly being familiar with core Nix development, the impact of these issues
+is not always easy for me to understand. Therefore, I thought it might also help
+others if I published the notes while reading through the suggested material.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;nix-store-acls&quot;&gt;Nix Store ACLs&lt;&#x2F;h2&gt;
+&lt;p&gt;Reference: &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;rfcs&#x2F;pull&#x2F;143&quot;&gt;RFC 0143&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Implement a way to only allow user access to a store path if they provide
+proof that they have all the necessary sources available, or had the access
+permission explicitly granted to them.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;Well written!&lt;&#x2F;p&gt;
+&lt;p&gt;Obviously, this is related to stores and is superficially nearly the opposite to
+what we want: This is about restricting access to parts of a store -- not being
+more permissive.&lt;&#x2F;p&gt;
+&lt;p&gt;But, could we not require substitution of all private artifacts? I.e. ensure
+that all private artifacts are available in our shared Nix store (cache)? The
+fetches would just be &quot;Fixed Output Derivations&quot;, meaning that they already
+specify the hash of the fetched artifact, and before attempting the fetch our
+nix client would check if it is already available in the cache.&lt;&#x2F;p&gt;
+&lt;p&gt;This would not even require this RFC but simply a private Nix store, in our case
+via AWS S3.&lt;&#x2F;p&gt;
+&lt;p&gt;I have some concerns:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;The fetching &quot;builder code&quot; would be misleading since the intention is that it
+would never be executed. I vaguely remember there is a construct in
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nixpkgs&#x2F;&quot;&gt;Nixpkgs&lt;&#x2F;a&gt; that models &quot;you need to download
+this independently and upload it to your store&quot;, so that could be remedied.&lt;&#x2F;li&gt;
+&lt;li&gt;Someone or something would still need to get access to the artifact and
+upload it to the shared store. That might be relatively easy to achieve (e.g.
+by putting the upload into the CI&#x2F;CD pipeline of the binary) or difficult,
+depending as so often on the context. For us, it would be acceptable, even
+though I&#x27;d like to keep the CI&#x2F;CD pipelines untouched for now so that the nix
+related changes keep in a few isolated repos.&lt;&#x2F;li&gt;
+&lt;li&gt;I conceptualize the AWS S3 Store that we set up as &quot;cache&quot; that does not need
+to be backed up etc. The requirement of always having all private binaries
+available there, would invalidate that.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Where would the RFC be of use for us?&lt;&#x2F;p&gt;
+&lt;p&gt;The RFC itself mentions that this is probably not a good idea to use this for
+secrets. So we should not use it to e.g. store GitLab credentials in a store
+path in a protected manner. But I&#x27;ll think more about that.&lt;&#x2F;p&gt;
+&lt;p&gt;What the RFC does allow is to allow access to some binaries without making their
+full build recipes and source available. That could be nice but is generally not
+our problem: The build of the binaries is not nixified anyways and thus Nix
+doesn&#x27;t see the source. Furthermore, all our employees can see pretty much all
+our source code and we like it that way.&lt;&#x2F;p&gt;
+&lt;p&gt;In theory, the RFC could be a solution for bootstrapping: In our case, for even
+authenticating, we need certain authentication helpers. With the RFC, we could
+expose the parts of the store publicly that are strictly needed for
+bootstrapping publicly and all the rest only privately.&lt;&#x2F;p&gt;
+&lt;p&gt;But all in all, it looks quite complicated to pull off and is not a good match
+for our needs, I think.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;builtin-fetching-should-be-represented-by-derivations&quot;&gt;Builtin fetching should be represented by derivations&lt;&#x2F;h2&gt;
+&lt;p&gt;Reference: &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;9077&quot;&gt;Nix Github Issue #9077&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Currently, there are two fundamental different ways of &quot;fetching&quot;:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&quot;built-in fetchers&quot; (libfetchers): These are functions of &quot;Nix the language&quot; and are
+executed directly while evaluating the build tree.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&quot;fixed-output derivation fetchers&quot;: Nix allows them to access the network by
+virtue of an easily verifiable promise. FODs need to specify the hash of
+their output upfront.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;This has some indirect consequences which is why, depending on their needs,
+prefer one over the other.&lt;&#x2F;p&gt;
+&lt;p&gt;&quot;Built-in&quot; fetchers run wherever the Nix expressions are evaluated - in the
+environment of the user that invoked the build. That has an immediate
+application for us: If the user is authenticated, the fetcher also has
+access to the associated credentials!&lt;&#x2F;p&gt;
+&lt;p&gt;Yet, it also requires that we have an appropriate fetcher directly built into
+Nix, which makes this weirdly inflexible: The built-in fetchers do not e.g.
+allow setting an authentication header from an environment variable. That makes
+it impossible fetching job artifacts via &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;gitlab.com&#x2F;gitlab-org&#x2F;gitlab&#x2F;-&#x2F;issues&#x2F;341157&quot;&gt;the GitLab API that does not allow
+basic authentication&lt;&#x2F;a&gt;
+which would be supported via credentials via the &lt;del&gt;insanely limited, not even
+supporting passwords with spaces&lt;&#x2F;del&gt; time-proven &lt;code&gt;netrc&lt;&#x2F;code&gt; mechanism.&lt;&#x2F;p&gt;
+&lt;p&gt;In addition to this inflexibility due to the nature of being in the Nix code
+(live with what we Elders have foreseen, Young Jedi), there are also performance issues,
+e.g. builtin-fetchers are only executed one by one and not in parallel with
+derivations. This is what the issues strives to fix that and more (I believe).
+That is really cool!&lt;&#x2F;p&gt;
+&lt;p&gt;I am not clear, though, &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;9077#issuecomment-1817861537&quot;&gt;if this would mean that the built-in fetchers would
+still be executed by the build
+client&lt;&#x2F;a&gt;, e.g.
+the user that called &lt;code&gt;nix build&lt;&#x2F;code&gt;. Let&#x27;s assume that in good faith for now,
+otherwise this would make authentication more difficult not easier. (Note from
+future Peter: This gets actually addressed in the next section!)&lt;&#x2F;p&gt;
+&lt;p&gt;So in a future world where Nix contained a built-in fetcher suitable for GitLab,
+this could mitigate some of the downsides of built-in fetchers.&lt;&#x2F;p&gt;
+&lt;p&gt;How would it work then with remote builders?&lt;&#x2F;p&gt;
+&lt;p&gt;For the first time:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;nix build&lt;&#x2F;code&gt; gets invoked.&lt;&#x2F;li&gt;
+&lt;li&gt;Fetch from GitLab running in the same process or at least environment as the
+&lt;code&gt;nix build&lt;&#x2F;code&gt; process so it has access to all user authentication.&lt;&#x2F;li&gt;
+&lt;li&gt;The result is uploaded to the builders from the local machine...&lt;&#x2F;li&gt;
+&lt;li&gt;build continues&lt;&#x2F;li&gt;
+&lt;li&gt;Someway or the other, the result of the fetch ends up in our shared Nix
+store&#x2F;substituter.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Afterwards:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;nix build&lt;&#x2F;code&gt; gets invoked.&lt;&#x2F;li&gt;
+&lt;li&gt;The result gets substituted which is also fast on remote builders.&lt;&#x2F;li&gt;
+&lt;li&gt;Build continues...&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Not too bad, but actually nearly not at all dependent on issue #9077. It mostly
+depends on supporting GitLab by having more flexible built-in fetchers.
+Potentially, I could do that with a nix plugin or patch.&lt;&#x2F;p&gt;
+&lt;p&gt;What is really cool about this solution is that the credentials never leave the
+client. Which makes it both simple and secure. But implementing that issue in a
+way that would allow executing these fetches in parallel but on the client is
+not really trivial.&lt;&#x2F;p&gt;
+&lt;p&gt;BTW, built-in fetchers have other super powers (e.g. not necessarily
+requiring an output hash but simply a git hash) and FODs have some other problems
+(e.g. &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;nix-rerunning-fixed-output-derivations&#x2F;&quot;&gt;being unwantedly substituted when the URL but not the hash is
+changed&lt;&#x2F;a&gt;).&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;optional-client-side-building&quot;&gt;Optional client-side building&lt;&#x2F;h2&gt;
+&lt;p&gt;Reference: &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;9344&quot;&gt;Nix Github Issue #9344&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;ol&gt;
+&lt;li&gt;For fixed output derivations that need authentication, it is probably
+better to run them as the current user in order to give them secrets,
+especially ephemeral secrets (like expiring tokens) that might require some
+humans in the loop (various 2fa schemes) and are cumbersome to store in the
+store.&lt;&#x2F;li&gt;
+&lt;li&gt;Builtin fetching should be represented by derivations #9077 once the above
+is sorted out, we should do this too. Currently the main reason fetching is
+not done with derivations is authentication. This provides a proper
+solution. All fetching done as client-side derivations nicely meets in the
+middle of the current fixed-output derivations vs libfetchers divide.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;Huh! John addressed my previous concerns here without me even realizing. Thanks
+again!&lt;&#x2F;p&gt;
+&lt;p&gt;After this John dives directly into implementation details that are hard to
+follow for me:&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;General decoupling. Building shouldn&#x27;t depend on using the SQL database
+(and I don&#x27;t think it currently does). It ought to work with other stores that
+also provide a bike system view.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;I assume that he means &quot;build system view&quot; but &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;9344#issuecomment-1817868871&quot;&gt;I can&#x27;t follow the relationship to
+the SQLite database&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h2&gt;
+&lt;p&gt;It was interesting to learn about the different proposals. Some of them would be
+awesome improvements, the last one would nearly solve my problem.&lt;&#x2F;p&gt;
+&lt;p&gt;Short term I see the following possibilities for allowing private fetches from
+GitLab:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Patching nix or writing a plugin so that I can use a more flexible &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;nixos.org&#x2F;manual&#x2F;nix&#x2F;stable&#x2F;language&#x2F;builtins.html#builtins-fetchurl&quot;&gt;fetchurl
+built-in&lt;&#x2F;a&gt;
+that supports setting headers from environment variables. That would allow me
+to pass credentials without somehow having them end up in the store.&lt;&#x2F;li&gt;
+&lt;li&gt;Using a custom FOD to fetch from GitLab and have a mechanism to pass the
+GitLab API token to the builder.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;The second one could be easily achieved by similar means as described
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;2023-nix-s3-store-authentication&#x2F;&quot;&gt;here&lt;&#x2F;a&gt;: E.g.
+allowing trusted clients to change allowlisted environment variables in the
+builder. Since that is not possible yet and requires further discussion, I
+implemented a hacky way to do that in our internal PoC. I might write a separate
+blog post about that!&lt;&#x2F;p&gt;
+&lt;p&gt;If you want to know more about my current journey and context, check out &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;2023-nix-for-private-binaries&#x2F;&quot;&gt;Nix:
+Distributing private&#x2F;public
+binaries&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;Noticed a mistake? Want to discuss something with me? Feel free to
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;discourse.nixos.org&#x2F;t&#x2F;nix-authenticated-fetches-from-gitlab-reading-about-related-work&#x2F;35708.&quot;&gt;discuss&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Alos, feel free to get in touch with me with the information shared on &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&quot;&gt;my
+GitHub profile kolloch&lt;&#x2F;a&gt; or &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;pkolloch&quot;&gt;Twitter
+@pkolloch&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+</description>
+      </item>
+      <item>
+          <title>Nix: Re-running fixed output derivations - at the right time</title>
+          <pubDate>Sun, 10 May 2020 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.eigenvalue.net/nix-rerunning-fixed-output-derivations/</link>
+          <guid>https://blog.eigenvalue.net/nix-rerunning-fixed-output-derivations/</guid>
+          <description xml:base="https://blog.eigenvalue.net/nix-rerunning-fixed-output-derivations/">&lt;p&gt;If you instantiate this derivation on your local machine, it will fail&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#1&quot;&gt;1&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt;:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    nix repl ‘&amp;lt;nixpkgs&amp;gt;’&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    nix-repl&amp;gt; :b runCommandLocal &amp;quot;myfetch&amp;quot; {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;              	outputHash =  &amp;quot;sha256:04jnq6arig0amz0scadavbzn9bg9k4zphmrm1562n6ygfj1dnj45&amp;quot;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;          	} &amp;#39;&amp;#39;Garbage. This should be a script executable by bash calling curl. It isn’t.&amp;#39;&amp;#39;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        &#x2F;build&#x2F;.attr-0: line 1: Garbage.: command not found&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    [0 built (1 failed)]&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    error: build of &amp;#39;&#x2F;nix&#x2F;store&#x2F;0bn9k5s227v6mb2pvyjdh9rh1rw4l1rm-myfetch.drv&amp;#39; failed&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Reasonably so. Yet, on my machine, Nix contently answers with an output path. Wuuuut?&lt;&#x2F;p&gt;
+&lt;p&gt;For experienced Nixers, this is not a surprise: this happens if you change a
+so-called “Fixed Output Derivation” without updating the hash.&lt;&#x2F;p&gt;
+&lt;p&gt;However, when I first made this mistake, I didn’t know whether I did something
+wrong, had a crucial misunderstanding, or Nix had a bug. I was frustrated. I
+learned that I
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;releases.nixos.org&#x2F;nix-dev&#x2F;2014-September&#x2F;014362.html&quot;&gt;am&lt;&#x2F;a&gt;
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;2270#issuecomment-521471329&quot;&gt;not&lt;&#x2F;a&gt;
+&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nix&#x2F;issues&#x2F;2270#issuecomment-621541929&quot;&gt;alone&lt;&#x2F;a&gt;.
+Eventually, I understood what had happened and I could appreciate the tough
+implementation choices! Yet, there was this nagging feeling that there had to be
+a better way.&lt;&#x2F;p&gt;
+&lt;p&gt;In this article, I explore your choices as a fellow Nixer to
+verify your Fixed Output Derivations without refetching and rebuilding
+everything all the time.&lt;&#x2F;p&gt;
+&lt;p&gt;NOTE: This article is aimed at Nixers already familiar with writing derivations.
+For an introduction to Nix, see &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;blog.eigenvalue.net&#x2F;nix-superglue-for-immutable-infrastructure&#x2F;&quot;&gt;Nix: superglue for immutable
+infrastructure&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;fixed-output-derivations&quot;&gt;Fixed Output Derivations&lt;&#x2F;h3&gt;
+&lt;p&gt;Normally, Nix doesn’t allow derivations (= build steps) to access the
+network&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#2&quot;&gt;2&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;If you want network access from a derivation to download some sources, Nix
+requires you to set clear expectations: an output hash. A derivation with such a
+predetermined output hash is called “Fixed Output Derivation” or, abbreviated,
+“FOD”.&lt;&#x2F;p&gt;
+&lt;p&gt;This prevents you from silently introducing randomness into your build. If you
+interact with the network, you interact with the messy world beyond Nix’s
+control. But, at least, Nix can shout and abort the build, when your derivation
+does not produce the expected output.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;enter-caching-substitution&quot;&gt;Enter caching (substitution)&lt;&#x2F;h3&gt;
+&lt;p&gt;We surely do not want to re-download the Internet, again, in every build.&lt;&#x2F;p&gt;
+&lt;p&gt;Therefore, Nix will helpfully cache the result by the name of the derivation and
+the output hash.&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#3&quot;&gt;3&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; You have given Nix a promise: Trust me, whatever command I
+specify, it will result in the given hash. If Nix can ascertain the right
+result, why do all the hard work?&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;preventing-huge-rebuilds&quot;&gt;Preventing huge rebuilds&lt;&#x2F;h3&gt;
+&lt;p&gt;It goes further than that. If we want to re-execute the derivation without
+messing with our Nix store that acts like a cache, we will need to change the
+output path. If we change the output path, all the beautiful derivations and
+process that output further, will need to be rebuilt.&lt;&#x2F;p&gt;
+&lt;p&gt;Ooooh, that can be expensive. E.g. think of GNU libc. All the things we need to
+rebuild with exactly the same code that we happen to store at a different path!&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;back-to-the-problem&quot;&gt;Back to the problem&lt;&#x2F;h3&gt;
+&lt;p&gt;All this very reasonable thinking leads to the problem with which I started this
+article. The commands of the derivations are ignored if we already have a
+matching derivation result!&lt;&#x2F;p&gt;
+&lt;p&gt;In fact, Nixpkgs contains plenty of code that will typically be evaluated but
+not executed&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;because there is still a matching result in the cache. &lt;code&gt;fetchurl&lt;&#x2F;code&gt; etc. are all
+implemented with FODs (Fixed Output Derivations), so that this applies to the
+hypothetical PR in which I change something like:&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    fetchurl&lt;&#x2F;span&gt;&lt;span&gt; {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    	url&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;https:&#x2F;&#x2F;pigeonhole.dovecot.org&#x2F;releases&#x2F;2.3&#x2F;dovecot-2.3-pigeonhole-&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;version&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt;.tar.gz&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    	sha256&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;0pk0579ifl3ymfzn505396bsjlg29ykwr7ag8prcbafayg4rrj28&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;     }&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;To this:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    fetchurl&lt;&#x2F;span&gt;&lt;span&gt; {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    	url&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;https:&#x2F;&#x2F;there.was.never.anything&#x2F;here&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    	sha256&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;0pk0579ifl3ymfzn505396bsjlg29ykwr7ag8prcbafayg4rrj28&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;     }&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;And most likely, the CI job would rubber stamp this lovely PR while a human
+would obviously object.&lt;&#x2F;p&gt;
+&lt;p&gt;Note that we can never ensure perfectly that an URL in a derivation still works
+-- it is outside of our control. But we could ensure that it worked at least
+once. A big difference, in my opinion!&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;rerunning-fods-on-all-input-changes&quot;&gt;Rerunning FODs on all input changes&lt;&#x2F;h3&gt;
+&lt;p&gt;As an experiment, let’s see what is necessary to re-execute FODs (Fixed Output
+Derivations) on any input change.&lt;&#x2F;p&gt;
+&lt;p&gt;FODs are rebuilt when their output hash or their name changes. Therefore, if we
+include a hash over all inputs in the name, we rebuild the FOD on every input
+change. We do this in four simple steps:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;To get Nix to calculate that hash conveniently for us, we “unfix” the given
+FOD and create a normal derivation based on it:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; unfixedDerivation&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;    fixedOutputDerivation&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;overrideAttrs&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;attrs&lt;&#x2F;span&gt;&lt;span&gt;: {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;        outputHash&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; null&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;        outputHashAlgo&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; null&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;        outputHashMode&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; null&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    });&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;We grab the output path with the hash:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; outputPath&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; builtins&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;unsafeDiscardStringContext unfixedDerivation&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;outPath&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;We are using &lt;code&gt;unsafeDiscardStringContext&lt;&#x2F;code&gt; to make Nix allow us to use the
+string as part of our name. Despite the name, it works in pure&#x2F;strict eval
+mode and is quite harmless, yet unusual.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Extract the hash:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; inputsHash&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; builtins&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;substring&lt;&#x2F;span&gt;&lt;span style=&quot;color: #B5CEA8;&quot;&gt; 11 32&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; outputPath&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;And use it as part of the derivation name:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; name&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt; &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;inputsHash&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt;_&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;name&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color: #CE9178;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;You have just created a Fixed Output Derivation that will re-execute whenever
+any of its inputs changes!&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;rebalancing&quot;&gt;Rebalancing&lt;&#x2F;h3&gt;
+&lt;p&gt;For me, rebuilding FODs on every input change, would have been easier to
+understand. For small projects, it is even a reasonable approach. But for medium
+and larger projects, it is simply unacceptable: If we use this technique in
+this extreme form, we will rebuild mostly everything if&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;we update curl,&lt;&#x2F;li&gt;
+&lt;li&gt;we change the mirror list,&lt;&#x2F;li&gt;
+&lt;li&gt;any other input changes of &lt;code&gt;fetchurl&lt;&#x2F;code&gt;!&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;For medium-sized projects I’d recommend another approach:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Use only your original Fixed Output Derivation as a dependency for your real
+build.&lt;&#x2F;li&gt;
+&lt;li&gt;Then, use the instrumented Fixed Output Derivation in your continuous
+integration testing. That will rebuild all the Fixed Output Derivations
+themselves on any input change but it stops there. Nothing that depends on
+them needs to be rebuilt!&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;For huge projects like nixpkgs, further fine-tuning is desirable. For every
+change on &lt;code&gt;fetchurl&lt;&#x2F;code&gt;, you may want to execute a couple of basic tests but you
+may find it unnecessary to re-execute all fetchurls. In addition, you might want
+to execute each fetch at least once every 30 days or so, even without changes,
+so that you ensure the URLs are still meaningful. Elaborating on that
+deserves another article.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;easy-experimentation&quot;&gt;Easy Experimentation&lt;&#x2F;h3&gt;
+&lt;p&gt;I have created a
+“&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kolloch&#x2F;nur-packages&#x2F;blob&#x2F;master&#x2F;lib&#x2F;rerun-fixed.nix&quot;&gt;rerunFixed&lt;&#x2F;a&gt;”
+function which can be used like this:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;rerunOnChange&lt;&#x2F;span&gt;&lt;span&gt; {}&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; myFixedOutputDerivation&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;By default, it will rerun the given FOD on every input change as a starting
+point. You can pre-override the attrs before they are used for the hash
+calculation:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #D4D4D4; background-color: #1E1E1E;&quot;&gt;&lt;code data-lang=&quot;nix&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;rerunOnChange&lt;&#x2F;span&gt;&lt;span&gt; {&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt;   	preOverrideAttrs&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; attrs&lt;&#x2F;span&gt;&lt;span&gt;: {&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; irrelevant&lt;&#x2F;span&gt;&lt;span&gt; =&lt;&#x2F;span&gt;&lt;span style=&quot;color: #569CD6;&quot;&gt; null&lt;&#x2F;span&gt;&lt;span&gt;; };&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color: #9CDCFE;&quot;&gt; myFixedOutputDerivation&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Look at the docs to see how you can tune it. And let me know &lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;pkolloch&quot;&gt;via
+Twitter&lt;&#x2F;a&gt; if you have questions or suggestions.
+Follow me if you want to see more articles like this.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h3&gt;
+&lt;p&gt;I think that it is worth-while checking that the code of your Fixed Output
+Derivations still work, occasionally. When and how often - that depends heavily
+on the context. I am curious about what you come up with!&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;thanks&quot;&gt;Thanks&lt;&#x2F;h3&gt;
+&lt;p&gt;Special thanks to Andreas Rammhold (&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;andir0815&quot;&gt;@andir0815&lt;&#x2F;a&gt;)
+for experimenting with the idea with me and telling me about
+&lt;code&gt;unsafeDiscardStringContext&lt;&#x2F;code&gt;. In my earlier prototype, I needed to do &quot;Import
+from Derivation&quot; to get rid of the string context!&lt;&#x2F;p&gt;
+&lt;p&gt;Thank you to Florian Klink (&lt;a rel=&quot;external&quot; href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;flokli&quot;&gt;@flokli&lt;&#x2F;a&gt;) and Andi
+(again!) for giving me valuable feedback on an earlier draft of this article.&lt;&#x2F;p&gt;
+&lt;p&gt;Mistakes are mine.&lt;&#x2F;p&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;1&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;1&lt;&#x2F;sup&gt;
+&lt;p&gt;runCommandLocal is from nixpkgs.&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;2&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;2&lt;&#x2F;sup&gt;
+&lt;p&gt;When running in sandboxed mode. Which you should to get all the beautiful
+properties of Nix.&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;3&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;3&lt;&#x2F;sup&gt;
+&lt;p&gt;To be more exact: Nix will check if the output path of the derivation
+already exists locally or at any of the given remote substituters (like
+cache.nixos.org). The output path, in turn, depends on the name and the
+outputHash.&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+</description>
+      </item>
+    </channel>
+</rss>
